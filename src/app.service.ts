@@ -3,6 +3,7 @@ import { Cron, SchedulerRegistry } from '@nestjs/schedule';
 import { Web3Service } from './web3/web3.service';
 import { OracleService } from './oracle/oracle.service';
 import { ConfigService } from '@nestjs/config';
+import { FutureInfo, MarketInfo } from "./types";
 
 @Injectable()
 export class AppService {
@@ -45,17 +46,15 @@ export class AppService {
 
     const serviceBalance = await this.web3Service.getServiceBalance();
     this.logger.log(
-      `Service account balance: ${this.web3Service.web3.utils.fromWei(
-        serviceBalance,
-      )} ETH (${serviceBalance} wei)`,
+      `Service account balance: ${serviceBalance} wei`,
     );
-    if (serviceBalance === '0') {
+    if (serviceBalance.toString() === '0') {
       this.logger.error(`Service account balance is zero, exit.`);
       process.exit(1);
     }
   }
 
-  @Cron('*/10 * * * * *', {
+  @Cron('*/30 * * * * *', {
     name: 'update',
     disabled: false,
   })
@@ -63,6 +62,21 @@ export class AppService {
     const job = this.schedulerRegistry.getCronJob('update');
     job.stop();
 
+    const maxRisk = this.configService.get('trading.maxRisk')
+    const maxTradeSize = this.configService.get('trading.maxTradeSize')
+
+    const markets = await this.web3Service.activeMarketsInfo()
+    for(let market of markets) {
+      const portfolio = await this.web3Service.getMarketPortfolio(market.descriptor.id)
+      for(let future of market.futures) {
+        await this.tradeFuture(market, future)
+      }
+    }
+
     job.start();
+  }
+
+  async tradeFuture(market: MarketInfo, future: FutureInfo) {
+
   }
 }

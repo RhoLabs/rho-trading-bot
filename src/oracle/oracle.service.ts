@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import {OraclePackage, OracleRecord} from '../types';
+import {OracleRecord} from '../types';
 
 @Injectable()
 export class OracleService {

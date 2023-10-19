@@ -29,11 +29,10 @@
     "@nestjs/swagger": "^7.1.2",
     "axios": "^1.4.0",
     "cache-manager": "^5.2.3",
-    "ethers": "5.7.2",
+    "ethers": "6.8.0",
     "evm-bn": "^1.1.2",
     "moment": "^2.29.4",
-    "reflect-metadata": "^0.1.13",
-    "web3": "1.10.0"
+    "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
