@@ -53,7 +53,7 @@ export interface FutureInfo {
   openInterest: bigint
 }
 
-enum RiskDirectionType {
+export enum RiskDirectionType {
   RECEIVER = 0,
   PAYER = 1
 }

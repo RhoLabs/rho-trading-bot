@@ -1,11 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import RouterABI from './abi/Router.json';
-import QuoterABI from './abi/Quoter.json';
-import ViewDataProviderABI from './abi/ViewDataProvider.json';
-import { FutureInfo, MarketInfo, MarketOraclePackages, MarketPortfolio } from "../types";
+import { FutureInfo, MarketInfo, MarketOraclePackages, MarketPortfolio, RiskDirectionType, TradeQuote } from "../types";
 import {OracleService} from "../oracle/oracle.service";
-import { ethers, JsonRpcProvider, Contract, Wallet, Provider } from "ethers";
+import { ethers, JsonRpcProvider, Contract, Wallet, Provider, TransactionReceipt, formatEther } from "ethers";
+import { ERC20ABI, QuoterABI, RouterABI, ViewDataProviderABI } from "./abi";
+
+export interface ExecuteTradeParams {
+  marketId: string
+  futureId: string
+  direction: RiskDirectionType
+  notional: bigint
+  futureRateLimit: bigint
+  depositAmount: bigint
+  deadline: number
+  settleMaturedPositions?: boolean
+}
 
 @Injectable()
 export class Web3Service {
@@ -37,7 +46,7 @@ export class Web3Service {
     this.routerContract = new ethers.Contract(
       configService.get('routerContractAddress'),
       RouterABI,
-      this.provider
+      this.signer
     )
 
     this.quoterContract = new ethers.Contract(
@@ -47,6 +56,111 @@ export class Web3Service {
     )
 
     this.logger.log(`Bot account address: ${this.signer.address}`);
+  }
+
+  async bootstrap() {
+    const balance = await this.getServiceBalance();
+    this.logger.log(
+      `Service account balance: ${formatEther(balance)} ETH (${balance} wei)`,
+    );
+    if (balance === 0n) {
+      this.logger.error(`Service account balance is zero, exit.`);
+      process.exit(1);
+    }
+
+    let markets: MarketInfo[] = [];
+    try {
+      markets = await this.activeMarketsInfo();
+      markets = markets.filter(market => this.configService.get('marketIds').includes(market.descriptor.id))
+    } catch (e) {
+      this.logger.error(
+        `Bootstrap: cannot get markets ${(e as Error).message}`,
+      );
+    }
+
+    for (let i = 0; i < markets.length; i++) {
+      try {
+        const market = markets[i];
+        const { underlying, underlyingName } = market.descriptor;
+        const spenderAddress = this.configService.get('routerContractAddress');
+        const accountBalance = await this.getBalanceOf(
+          underlying,
+          this.signer.address,
+        );
+        const allowance = await this.getAllowance(
+          underlying,
+          this.signer.address,
+          spenderAddress,
+        );
+        this.logger.log(
+          `${underlyingName} (${underlying}) balance: ${accountBalance}, allowance: ${allowance}`,
+        );
+
+        if (accountBalance === 0n) {
+          this.logger.error(
+            `Service account balance is zero for token ${underlyingName} (${underlying}), exit`,
+          );
+          process.exit(1);
+        }
+
+        if (accountBalance !== allowance) {
+          this.logger.log(
+            `Updating ${underlyingName} ${underlying} allowance...`,
+          );
+          const receipt = await this.setAllowance(
+            market.descriptor.underlying,
+            spenderAddress,
+            accountBalance,
+          );
+          this.logger.log(
+            `Updated allowance ${accountBalance} ${underlyingName} ${underlying} for address ${this.signer.address}, txnHash: ${receipt.hash}`,
+          );
+        } else {
+          this.logger.log(
+            `Allowance ${underlyingName}: no need to update`,
+          );
+        }
+      } catch (e) {
+        this.logger.error(`Cannot set allowance: ${(e as Error).message}`);
+      }
+    }
+  }
+
+  async getBalanceOf(contractAddress: string, userAddress: string): Promise<bigint> {
+    const erc20Contract = new ethers.Contract(
+      contractAddress,
+      ERC20ABI,
+      this.provider
+    )
+    return await erc20Contract.balanceOf(userAddress)
+  }
+
+  async getAllowance(
+    contractAddress: string,
+    userAddress: string,
+    spenderAddress: string,
+  ): Promise<bigint> {
+    const erc20Contract = new ethers.Contract(
+      contractAddress,
+      ERC20ABI,
+      this.provider
+    )
+    return await erc20Contract.allowance(userAddress, spenderAddress)
+  }
+
+  async setAllowance(
+    erc20ContractAddress: string,
+    spenderAddress: string,
+    amount: bigint,
+  ): Promise<TransactionReceipt> {
+    const erc20Contract = new ethers.Contract(
+      erc20ContractAddress,
+      ERC20ABI,
+      this.signer
+    )
+    const receipt = await erc20Contract.approve(spenderAddress, amount);
+    await receipt.wait();
+    return receipt
   }
 
   async getFuturesCloseToMaturity(
@@ -120,6 +234,44 @@ export class Web3Service {
   ): Promise<MarketPortfolio> {
     const oraclePackage = await this.oracleService.getOraclePackage(marketId)
     return await this.viewContract.marketPortfolio(marketId, userAddress, [oraclePackage])
+  }
+
+  async quoteTrade(
+    marketId: string,
+    futureId: string,
+    notional: bigint,
+    userAddress = this.signer.address
+  ): Promise<TradeQuote> {
+    const oraclePackage = await this.oracleService.getOraclePackage(marketId)
+    return await this.quoterContract.quoteTrade(futureId, notional, userAddress, [oraclePackage])
+  }
+
+  async executeTrade(params: ExecuteTradeParams): Promise<TransactionReceipt> {
+    const {
+      marketId,
+      futureId,
+      direction,
+      notional,
+      futureRateLimit,
+      depositAmount,
+      deadline,
+      settleMaturedPositions = true
+    } = params
+
+    const oraclePackage = await this.oracleService.getOraclePackage(marketId)
+    const receipt = await this.routerContract.executeTrade(
+      futureId,
+      direction,
+      notional,
+      futureRateLimit,
+      depositAmount,
+      deadline,
+      settleMaturedPositions,
+      [oraclePackage]
+    );
+
+    await receipt.wait();
+    return receipt
   }
 
   getAccountAddress() {

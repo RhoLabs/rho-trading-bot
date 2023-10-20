@@ -9,9 +9,10 @@ export default () => ({
   viewContractAddress: process.env.VIEW_CONTRACT_ADDRESS || '',
   quoterContractAddress: process.env.QUOTER_CONTRACT_ADDRESS || '',
   marketIds: (process.env.MARKET_IDS || '').split(','),
+  futureIds: (process.env.FUTURE_IDS || '').split(','),
   trading: {
     maxRisk: tempValue,
-    maxTradeSize: 1000,
+    maxTradeSize: 100,
     warningLosses: tempValue
   }
 });
