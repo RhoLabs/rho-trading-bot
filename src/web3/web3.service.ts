@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FutureInfo, MarketInfo, MarketOraclePackages, MarketPortfolio, RiskDirectionType, TradeQuote } from "../types";
 import {OracleService} from "../oracle/oracle.service";
-import { ethers, JsonRpcProvider, Contract, Wallet, Provider, TransactionReceipt, formatEther } from "ethers";
+import { ethers, JsonRpcProvider, Contract, Wallet, Provider, TransactionReceipt, formatEther, formatUnits } from "ethers";
 import { ERC20ABI, QuoterABI, RouterABI, ViewDataProviderABI } from "./abi";
 
 export interface ExecuteTradeParams {
@@ -81,7 +81,7 @@ export class Web3Service {
     for (let i = 0; i < markets.length; i++) {
       try {
         const market = markets[i];
-        const { underlying, underlyingName } = market.descriptor;
+        const { underlying, underlyingName, underlyingDecimals } = market.descriptor;
         const spenderAddress = this.configService.get('routerContractAddress');
         const accountBalance = await this.getBalanceOf(
           underlying,
@@ -93,7 +93,7 @@ export class Web3Service {
           spenderAddress,
         );
         this.logger.log(
-          `${underlyingName} (${underlying}) balance: ${accountBalance}, allowance: ${allowance}`,
+          `Underlying balance: ${formatUnits(accountBalance, underlyingDecimals)} ${underlyingName} (${accountBalance} wei), allowance: ${formatUnits(allowance, underlyingDecimals)} ${underlyingName} (${allowance} wei), token address: ${underlying}`,
         );
 
         if (accountBalance === 0n) {

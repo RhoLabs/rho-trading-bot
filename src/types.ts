@@ -89,14 +89,15 @@ export interface FixedAndFloatTokensPair {
 }
 
 export interface TradeInfo {
-  notional: bigint;
   direction: RiskDirectionType
   tokensPair: FixedAndFloatTokensPair;
-  marketRate: bigint;
+  marketRateBefore: bigint;
+  marketRateAfter: bigint;
   tradeRate: bigint;
   lpFee: bigint
   protocolFee: bigint
   floatIndex: bigint;
+  floatTradeValue: bigint;
 }
 
 export interface OneDirectionTradeQuote {

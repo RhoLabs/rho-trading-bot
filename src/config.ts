@@ -1,5 +1,3 @@
-const tempValue = 10000n**10n
-
 export default () => ({
   privateKey: process.env.PRIVATE_KEY || '',
   rpcUrl: process.env.RPC_URL || 'https://arbitrum-goerli.public.blastapi.io',
@@ -11,8 +9,9 @@ export default () => ({
   marketIds: (process.env.MARKET_IDS || '').split(','),
   futureIds: (process.env.FUTURE_IDS || '').split(','),
   trading: {
-    maxRisk: tempValue,
+    maxRisk: 100,
     maxTradeSize: 100,
-    warningLosses: tempValue
+    warningLosses: 100,
+    riskLevel: 100
   }
 });
