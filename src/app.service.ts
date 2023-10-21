@@ -1,10 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, SchedulerRegistry } from '@nestjs/schedule';
-import { ExecuteTradeParams, Web3Service } from "./web3/web3.service";
+import { ExecuteTradeParams, Web3Service } from './web3/web3.service';
 import { ConfigService } from '@nestjs/config';
-import { FutureInfo, MarketInfo, MarketPortfolio, RiskDirectionType } from "./types";
-import { generateRandom, getMax, marginTotal, toBigInt } from "./utils";
-import { LRUCache } from "lru-cache";
+import {
+  FutureInfo,
+  MarketInfo,
+  MarketPortfolio, RiskDirectionAlias,
+  RiskDirectionType,
+  TradeQuote
+} from "./types";
+import { generateRandom, getMax, marginTotal, toBigInt } from './utils';
+import { LRUCache } from 'lru-cache';
+
+interface CurrentMarketState {
+  dv01: bigint;
+  marketRate: bigint;
+  riskDirection: RiskDirectionType | null;
+  avgRate: bigint;
+}
 
 @Injectable()
 export class AppService {
@@ -79,7 +92,7 @@ export class AppService {
       const portfolio = await this.web3Service.getMarketPortfolio(market.descriptor.id)
       for (let future of futures) {
         try {
-          await this.initiateTrading(market, future, portfolio);
+          await this.startTrading(market, future, portfolio);
         } catch (e) {
           this.logger.error(`Error on trading future ${future.id}: ${(e as Error).message}`)
         }
@@ -89,35 +102,18 @@ export class AppService {
     job.start();
   }
 
-  async initiateTrading(market: MarketInfo, future: FutureInfo, portfolio: MarketPortfolio) {
-    const { id: marketId, underlyingDecimals } = market.descriptor;
-    const { id: futureId } = future;
-
+  getTradeDirection(market: MarketInfo, marketState: CurrentMarketState): RiskDirectionType | null {
+    const { underlyingDecimals } = market.descriptor
+    const {
+      dv01,
+      marketRate,
+      riskDirection,
+      avgRate
+    } = marketState
     let pReceive = 0, pPay = 0;
 
     const maxRisk = toBigInt(this.configService.get('trading.maxRisk'), underlyingDecimals)
     const riskLevel = toBigInt(this.configService.get('trading.riskLevel'), underlyingDecimals)
-    const maxTradeSize = this.configService.get('trading.maxTradeSize')
-    const notionalInteger= generateRandom(0, maxTradeSize, Math.floor(maxTradeSize / 10),);
-    const notional = toBigInt(notionalInteger, underlyingDecimals);
-
-    const tradeQuote = await this.web3Service.quoteTrade(
-      market.descriptor.id,
-      future.id,
-      notional,
-    );
-
-    const futureOpenPositions = portfolio.futureOpenPositions.filter((pos) => pos.futureId === futureId)
-    const avgRate = this.getAverageRate()
-    const dv01 = futureOpenPositions.reduce((acc, item) => acc + item.dv01, 0n)
-    const marketRate = tradeQuote.receiverQuote.tradeInfo.marketRateBefore
-    let floatTokenSum = 0n
-    if(portfolio) {
-      floatTokenSum = futureOpenPositions.reduce(
-        (acc, nextItem) => acc + nextItem.tokensPair.floatTokenAmount, 0n)
-    }
-    const currentRiskDirection = floatTokenSum === 0n ? null
-      : floatTokenSum < 0 ? RiskDirectionType.RECEIVER : RiskDirectionType.PAYER
 
     // Rule 1
     if(dv01 < riskLevel && marketRate > avgRate) {
@@ -132,7 +128,7 @@ export class AppService {
     // Rule 3.a
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
-      (currentRiskDirection === RiskDirectionType.RECEIVER) &&
+      (riskDirection === RiskDirectionType.RECEIVER) &&
       (marketRate < avgRate)
     ) {
       pReceive = 0.1
@@ -141,7 +137,7 @@ export class AppService {
     // Rule 3.b
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
-      (currentRiskDirection === RiskDirectionType.RECEIVER) &&
+      (riskDirection === RiskDirectionType.RECEIVER) &&
       (marketRate > avgRate)
     ) {
       pReceive = 0.6
@@ -150,7 +146,7 @@ export class AppService {
     // Rule 4.a
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
-      (currentRiskDirection === RiskDirectionType.PAYER) &&
+      (riskDirection === RiskDirectionType.PAYER) &&
       (marketRate > avgRate)
     ) {
       pReceive = 0.9
@@ -159,41 +155,102 @@ export class AppService {
     // Rule 4.b
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
-      (currentRiskDirection === RiskDirectionType.PAYER) &&
+      (riskDirection === RiskDirectionType.PAYER) &&
       (marketRate < avgRate)
     ) {
       pReceive = 0.4
       pPay = 1 - pReceive
     }
     // Rule 5
-    if(dv01 >= maxRisk && currentRiskDirection === RiskDirectionType.RECEIVER) {
+    if(dv01 >= maxRisk && riskDirection === RiskDirectionType.RECEIVER) {
       pReceive = 0
       pPay = 1 - pReceive
     }
     // Rule 6
-    if(dv01 >= maxRisk && currentRiskDirection === RiskDirectionType.PAYER) {
+    if(dv01 >= maxRisk && riskDirection === RiskDirectionType.PAYER) {
       pReceive = 1
       pPay = 1 - pReceive
     }
 
+    if(pReceive === 0 && pPay === 0) {
+      return null
+    }
+
+    const randomValue = Math.random()
+    const direction = randomValue <= pReceive
+      ? RiskDirectionType.RECEIVER
+      : RiskDirectionType.PAYER
+
+    this.logger.log(`P_Receive = ${pReceive}, P_Pay = ${pPay}, random value = ${randomValue}, trade direction: ${direction} (${RiskDirectionAlias[direction]})`)
+
+    return direction
+  }
+
+  async getCurrentMarketState(
+    future: FutureInfo,
+    portfolio: MarketPortfolio,
+    tradeQuote: TradeQuote
+  ) {
+    const { id: futureId } = future;
+
+    const futureOpenPositions = portfolio.futureOpenPositions.filter((pos) => pos.futureId === futureId)
+    const dv01 = futureOpenPositions.reduce((acc, item) => acc + item.dv01, 0n)
+    let floatTokenSum = 0n
+    if(portfolio) {
+      floatTokenSum = futureOpenPositions.reduce(
+        (acc, nextItem) => acc + nextItem.tokensPair.floatTokenAmount, 0n)
+    }
+    const riskDirection = floatTokenSum === 0n ? null
+      : floatTokenSum < 0 ? RiskDirectionType.RECEIVER : RiskDirectionType.PAYER
+
+    const marketState: CurrentMarketState  = {
+      dv01,
+      marketRate: tradeQuote.receiverQuote.tradeInfo.marketRateBefore,
+      riskDirection,
+      avgRate: this.getAverageRate()
+    }
+    return marketState
+  }
+
+  async startTrading(market: MarketInfo, future: FutureInfo, portfolio: MarketPortfolio) {
+    const { id: marketId, underlyingDecimals } = market.descriptor;
+    const { id: futureId } = future;
+
+    const maxTradeSize = this.configService.get('trading.maxTradeSize')
+    const notionalInteger = 100 // generateRandom(0, maxTradeSize, Math.floor(maxTradeSize / 10));
+    const notional = toBigInt(notionalInteger, underlyingDecimals);
+
+    const tradeQuote = await this.web3Service.quoteTrade(
+      market.descriptor.id,
+      future.id,
+      notional,
+    );
+
+    const marketState = await this.getCurrentMarketState(future, portfolio, tradeQuote)
+
     this.logger.log(
-      `Current market metrics:` +
-      `DV01: ${dv01}, ` +
-      `Market rate: ${marketRate}` +
-      `pReceive: ${pReceive}, pPay: ${pPay}`
+      `Current market state: ` +
+      `dv01: ${marketState.dv01}, ` +
+      `market rate: ${marketState.marketRate}, ` +
+      `avg rate: ${marketState.avgRate}, `
     )
 
-    const riskDirection = RiskDirectionType.RECEIVER
-    const selectedQuote = riskDirection === RiskDirectionType.RECEIVER ? tradeQuote.receiverQuote : tradeQuote.payerQuote
+    const tradeDirection = this.getTradeDirection(market, marketState)
+
+    if(tradeDirection === null) {
+      return false
+    }
+
+    const selectedQuote = tradeDirection === RiskDirectionType.RECEIVER ? tradeQuote.receiverQuote : tradeQuote.payerQuote
     const totalMargin = marginTotal(selectedQuote.newMargin)
     const { newMarginThreshold } = selectedQuote
     const depositAmount = getMax(newMarginThreshold - totalMargin, 0n)
-    const futureRateLimit = selectedQuote.tradeInfo.tradeRate + BigInt(0.1 * 10**16)*BigInt(riskDirection === RiskDirectionType.RECEIVER ? -1 : 1)
+    const futureRateLimit = selectedQuote.tradeInfo.tradeRate + BigInt(0.1 * 10**16)*BigInt(tradeDirection === RiskDirectionType.RECEIVER ? -1 : 1)
 
     const tradeParams: ExecuteTradeParams = {
       marketId,
       futureId,
-      direction: riskDirection,
+      direction: tradeDirection,
       notional,
       futureRateLimit,
       depositAmount, // toBigInt(1, underlyingDecimals),
@@ -201,8 +258,8 @@ export class AppService {
     }
 
     console.log('Trade attempt:', tradeParams)
-    // const tx = await this.web3Service.executeTrade(tradeParams);
-    // this.logger.log(`Trade completed! txnHash: ${tx.hash}, gasUsed: ${tx.gasUsed}`)
-    // this.tradeHistory.set(tx.hash, tradeParams)
+    const tx = await this.web3Service.executeTrade(tradeParams);
+    this.logger.log(`Trade completed! txnHash: ${tx.hash}, gasUsed: ${tx.cumulativeGasUsed}`)
+    this.tradeHistory.set(tx.hash, tradeParams)
   }
 }

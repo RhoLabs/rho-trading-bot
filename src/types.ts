@@ -58,6 +58,11 @@ export enum RiskDirectionType {
   PAYER = 1
 }
 
+export const RiskDirectionAlias = {
+  [RiskDirectionType.RECEIVER]: 'Receiver',
+  [RiskDirectionType.PAYER]: 'Payer',
+}
+
 enum IRateMathType {
   LINEAR = 0,
   COMPOUNDING = 1
