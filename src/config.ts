@@ -9,6 +9,7 @@ export default () => ({
   marketIds: (process.env.MARKET_IDS || '').split(','),
   futureIds: (process.env.FUTURE_IDS || '').split(','),
   trading: {
+    avgInterval: 10, // seconds
     maxRisk: 100,
     maxTradeSize: 100,
     warningLosses: 100,

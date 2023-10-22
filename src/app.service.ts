@@ -11,6 +11,7 @@ import {
 } from "./types";
 import { generateRandom, getMax, marginTotal, toBigInt } from './utils';
 import { LRUCache } from 'lru-cache';
+import { CronTime } from "cron";
 
 interface CurrentMarketState {
   dv01: bigint;
@@ -35,7 +36,6 @@ export class AppService {
     this.bootstrap()
       .then(() => this.web3Service.bootstrap())
       .then(() => this.logger.log(`Bot is running`))
-      .then(() => this.runUpdate());
   }
 
   async bootstrap() {
@@ -71,7 +71,7 @@ export class AppService {
     return counter > 0 ? sumRate / counter : 0n
   }
 
-  @Cron('*/30 * * * * *', {
+  @Cron('*/10 * * * * *', {
     name: 'update',
     disabled: false,
   })
@@ -99,7 +99,15 @@ export class AppService {
       }
     }
 
-    job.start();
+    const avgInterval = this.configService.get('trading.avgInterval')
+    const nextTradingTimeout = generateRandom(
+      avgInterval - Math.floor(avgInterval / 2),
+      avgInterval + Math.floor(avgInterval / 2),
+      Math.floor(avgInterval / 10)
+    )
+    job.setTime(new CronTime(new Date(Date.now() + nextTradingTimeout * 1000)))
+    this.logger.log(`Next trading in ${nextTradingTimeout} seconds`)
+    job.start()
   }
 
   getTradeDirection(market: MarketInfo, marketState: CurrentMarketState): RiskDirectionType | null {
@@ -217,7 +225,7 @@ export class AppService {
     const { id: futureId } = future;
 
     const maxTradeSize = this.configService.get('trading.maxTradeSize')
-    const notionalInteger = 100 // generateRandom(0, maxTradeSize, Math.floor(maxTradeSize / 10));
+    const notionalInteger = generateRandom(0, maxTradeSize, Math.floor(maxTradeSize / 10));
     const notional = toBigInt(notionalInteger, underlyingDecimals);
 
     const tradeQuote = await this.web3Service.quoteTrade(
@@ -259,7 +267,7 @@ export class AppService {
 
     console.log('Trade attempt:', tradeParams)
     const tx = await this.web3Service.executeTrade(tradeParams);
-    this.logger.log(`Trade completed! txnHash: ${tx.hash}, gasUsed: ${tx.cumulativeGasUsed}`)
+    this.logger.log(`Trade completed! txnHash: ${tx.hash}`)
     this.tradeHistory.set(tx.hash, tradeParams)
   }
 }
