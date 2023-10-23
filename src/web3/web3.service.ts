@@ -259,7 +259,7 @@ export class Web3Service {
     } = params
 
     const oraclePackage = await this.oracleService.getOraclePackage(marketId)
-    const receipt = await this.routerContract.executeTrade(
+    const executeTradeArguments = [
       futureId,
       direction,
       notional,
@@ -268,9 +268,17 @@ export class Web3Service {
       deadline,
       settleMaturedPositions,
       [oraclePackage]
+    ]
+
+    const estimateGas  = await this.routerContract.executeTrade.estimateGas(...executeTradeArguments)
+
+    const receipt = await this.routerContract.executeTrade(...executeTradeArguments,
+      {
+        gasLimit: estimateGas
+      }
     );
 
-    await receipt.wait();
+    await receipt.wait(this.configService.get('txConfirmations'));
     return receipt
   }
 

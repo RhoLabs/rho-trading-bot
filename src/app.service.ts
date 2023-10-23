@@ -106,7 +106,7 @@ export class AppService {
       Math.floor(avgInterval / 10)
     )
     job.setTime(new CronTime(new Date(Date.now() + nextTradingTimeout * 1000)))
-    this.logger.log(`Next trading in ${nextTradingTimeout} seconds`)
+    this.logger.log(`Next trade attempt in ${nextTradingTimeout} seconds`)
     job.start()
   }
 
@@ -189,7 +189,11 @@ export class AppService {
       ? RiskDirectionType.RECEIVER
       : RiskDirectionType.PAYER
 
-    this.logger.log(`P_Receive = ${pReceive}, P_Pay = ${pPay}, random value = ${randomValue}, trade direction: ${direction} (${RiskDirectionAlias[direction]})`)
+    this.logger.log(
+      `P_Receive = ${pReceive}, P_Pay = ${pPay} ` +
+      `(rand = ${randomValue}) ,` +
+      `trade direction: ${direction} (${RiskDirectionAlias[direction]})`
+    )
 
     return direction
   }
@@ -262,7 +266,7 @@ export class AppService {
       notional,
       futureRateLimit,
       depositAmount, // toBigInt(1, underlyingDecimals),
-      deadline: Date.now() + 5 * 60 * 1000
+      deadline: Date.now() + 30 * 1000
     }
 
     console.log('Trade attempt:', tradeParams)

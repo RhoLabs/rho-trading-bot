@@ -6,13 +6,15 @@ export default () => ({
   routerContractAddress: process.env.ROUTER_CONTRACT_ADDRESS || '',
   viewContractAddress: process.env.VIEW_CONTRACT_ADDRESS || '',
   quoterContractAddress: process.env.QUOTER_CONTRACT_ADDRESS || '',
+  txConfirmations: parseInt(process.env.TX_CONFIRMATIONS || '2'),
   marketIds: (process.env.MARKET_IDS || '').split(','),
   futureIds: (process.env.FUTURE_IDS || '').split(','),
   trading: {
-    avgInterval: 10, // seconds
-    maxRisk: 100,
-    maxTradeSize: 100,
-    warningLosses: 100,
-    riskLevel: 100
+    // Average interval between trade attempts [seconds]
+    avgInterval: parseInt(process.env.TRADE_AVERAGE_INTERVAL || '30'),
+    maxRisk: parseInt(process.env.TRADE_MAX_RISK || '100'),
+    maxTradeSize: parseInt(process.env.TRADE_MAX_SIZE || '100'),
+    warningLosses: parseInt(process.env.TRADE_WARNING_LOSSES || '100'),
+    riskLevel: parseInt(process.env.TRADE_RISK_LEVEL || '100')
   }
 });
