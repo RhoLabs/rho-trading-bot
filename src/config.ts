@@ -11,10 +11,11 @@ export default () => ({
   futureIds: (process.env.FUTURE_IDS || '').split(','),
   trading: {
     // Average interval between trade attempts [seconds]
-    avgInterval: parseInt(process.env.TRADE_AVERAGE_INTERVAL || '30'),
-    maxRisk: parseInt(process.env.TRADE_MAX_RISK || '100'),
-    maxTradeSize: parseInt(process.env.TRADE_MAX_SIZE || '100'),
-    warningLosses: parseInt(process.env.TRADE_WARNING_LOSSES || '100'),
+    avgInterval: parseInt(process.env.TRADE_AVERAGE_INTERVAL || '10'),
+    maxRisk: parseInt(process.env.TRADE_MAX_RISK || '1'),
+    // Max notional value [USDT]
+    maxTradeSize: parseInt(process.env.TRADE_MAX_SIZE || '1000'),
+    warningLosses: parseInt(process.env.TRADE_WARNING_LOSSES || '1'),
     riskLevel: parseInt(process.env.TRADE_RISK_LEVEL || '100')
   }
 });

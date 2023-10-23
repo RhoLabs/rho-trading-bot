@@ -92,7 +92,7 @@ export class AppService {
       const portfolio = await this.web3Service.getMarketPortfolio(market.descriptor.id)
       for (let future of futures) {
         try {
-          await this.startTrading(market, future, portfolio);
+          await this.initiateTrade(market, future, portfolio);
         } catch (e) {
           this.logger.error(`Error on trading future ${future.id}: ${(e as Error).message}`)
         }
@@ -191,7 +191,7 @@ export class AppService {
 
     this.logger.log(
       `P_Receive = ${pReceive}, P_Pay = ${pPay} ` +
-      `(rand = ${randomValue}) ,` +
+      `(rand = ${randomValue}), ` +
       `trade direction: ${direction} (${RiskDirectionAlias[direction]})`
     )
 
@@ -224,12 +224,12 @@ export class AppService {
     return marketState
   }
 
-  async startTrading(market: MarketInfo, future: FutureInfo, portfolio: MarketPortfolio) {
+  async initiateTrade(market: MarketInfo, future: FutureInfo, portfolio: MarketPortfolio) {
     const { id: marketId, underlyingDecimals } = market.descriptor;
     const { id: futureId } = future;
 
     const maxTradeSize = this.configService.get('trading.maxTradeSize')
-    const notionalInteger = generateRandom(0, maxTradeSize, Math.floor(maxTradeSize / 10));
+    const notionalInteger = generateRandom(Math.floor(maxTradeSize / 10), maxTradeSize, Math.floor(maxTradeSize / 10));
     const notional = toBigInt(notionalInteger, underlyingDecimals);
 
     const tradeQuote = await this.web3Service.quoteTrade(
@@ -269,7 +269,15 @@ export class AppService {
       deadline: Date.now() + 30 * 1000
     }
 
-    console.log('Trade attempt:', tradeParams)
+    this.logger.log(
+      `Trade attempt ` +
+      `futureId: ${tradeParams.futureId}, ` +
+      `direction: ${tradeParams.direction}, ` +
+      `notional: ${tradeParams.notional}, ` +
+      `futureRateLimit: ${tradeParams.futureRateLimit}, ` +
+      `depositAmount: ${tradeParams.depositAmount}, ` +
+      `deadline: ${tradeParams.deadline}`
+    )
     const tx = await this.web3Service.executeTrade(tradeParams);
     this.logger.log(`Trade completed! txnHash: ${tx.hash}`)
     this.tradeHistory.set(tx.hash, tradeParams)
