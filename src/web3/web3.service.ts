@@ -293,7 +293,7 @@ export class Web3Service {
 
     const receipt = await this.routerContract.executeTrade(...executeTradeArguments,
       {
-        gasLimit: estimateGas
+        gasLimit: BigInt(Math.round(Number(estimateGas) * 1.2))
       }
     );
 
