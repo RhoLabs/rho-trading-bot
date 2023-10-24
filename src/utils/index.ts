@@ -14,6 +14,10 @@ export const toBigInt = (value: number, decimalPlaces: bigint | number) => {
   return BigInt(value) * BigInt(10n ** BigInt(decimalPlaces))
 }
 
+export const fromBigInt = (value: bigint, decimalPlaces: bigint | number) => {
+  return Number(value) / 10 ** Number(decimalPlaces)
+}
+
 export const profitAndLossTotal = (input: ProfitAndLoss) => {
   return input.accruedLPFee + input.netFutureValue - input.incurredFee
 }

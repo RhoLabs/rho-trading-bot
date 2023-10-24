@@ -76,7 +76,7 @@ export interface MarketDescriptor {
   version: number
   underlying: string
   underlyingName: string
-  underlyingDecimals: number
+  underlyingDecimals: bigint
   underlyingIsWrappedNativeToken: boolean
   rateMathType: IRateMathType
 }

@@ -9,9 +9,10 @@ import {
   RiskDirectionType,
   TradeQuote
 } from "./types";
-import { generateRandom, getMax, marginTotal, toBigInt } from './utils';
+import { fromBigInt, generateRandom, getMax, marginTotal, profitAndLossTotal, toBigInt } from "./utils";
 import { LRUCache } from 'lru-cache';
 import { CronTime } from "cron";
+import { CoinGeckoTokenId, MarketApiService } from "./marketapi/marketapi.service";
 
 interface CurrentMarketState {
   dv01: bigint;
@@ -27,14 +28,17 @@ export class AppService {
     max: 1000,
     ttl: 30 * 24 * 60 * 60 * 1000
   })
+  private initialPL = 0
 
   constructor(
     private configService: ConfigService,
     private web3Service: Web3Service,
     private schedulerRegistry: SchedulerRegistry,
+    private marketApiService: MarketApiService
   ) {
-    this.bootstrap()
-      .then(() => this.web3Service.bootstrap())
+    this.web3Service.bootstrap()
+      .then(() => this.marketApiService.bootstrap())
+      .then(() => this.bootstrap())
       .then(() => this.logger.log(`Bot is running`))
   }
 
@@ -45,6 +49,7 @@ export class AppService {
         .split('')
         .map((_) => '*')
         .join('');
+
     this.logger.log(
       `\nrpcUrl: ${this.configService.get('rpcUrl')}` +
         `\noracleUrl: ${this.configService.get('oracleUrl')}` +
@@ -59,6 +64,24 @@ export class AppService {
           privateKey ? this.web3Service.getAccountAddress() : 'MISSING'
         }`,
     );
+
+    const portfolio = await this.web3Service.getPortfolio()
+    let initialPL = 0
+    for(let portfolioItem of portfolio) {
+      const {
+        descriptor: { underlyingName, underlyingDecimals },
+        marginState: { margin: { profitAndLoss } }
+      } = portfolioItem
+      const tokenName = underlyingName.toLowerCase().includes('eth') ? CoinGeckoTokenId.ethereum : CoinGeckoTokenId.tether
+      const tokenPriceUsd = await this.marketApiService.getTokenPrice(tokenName)
+      const itemPL = profitAndLossTotal(profitAndLoss)
+      initialPL+= +fromBigInt(itemPL, underlyingDecimals) * tokenPriceUsd
+    }
+    this.initialPL = initialPL
+    this.logger.log(`Initial P&L: ${initialPL} USD`)
+
+    const job = this.schedulerRegistry.getCronJob('update');
+    job.start()
   }
 
   getAverageRate() {
@@ -79,16 +102,22 @@ export class AppService {
     const job = this.schedulerRegistry.getCronJob('update');
     job.stop();
 
-    const marketIds = this.configService.get('marketIds');
-    const futureIds = this.configService.get('futureIds');
+    const configMarketIds = this.configService.get('marketIds') as string[];
+    const configFutureIds = this.configService.get('futureIds') as string[];
 
-    const markets = (await this.web3Service.activeMarketsInfo()).filter(
-      (item) => marketIds.includes(item.descriptor.id),
-    );
+    let markets = (await this.web3Service.activeMarketsInfo())
+
+    if(configMarketIds.length > 0) {
+      markets = markets.filter((item) => configMarketIds.includes(item.descriptor.id.toLowerCase()));
+    }
+
     for (let market of markets) {
-      const futures = market.futures.filter((future) =>
-        futureIds.includes(future.id),
-      );
+      let futures = market.futures
+
+      if(configFutureIds.length > 0) {
+        futures = futures.filter((future) => configFutureIds.includes(future.id.toLowerCase()));
+      }
+
       const portfolio = await this.web3Service.getMarketPortfolio(market.descriptor.id)
       for (let future of futures) {
         try {
@@ -225,7 +254,7 @@ export class AppService {
   }
 
   async initiateTrade(market: MarketInfo, future: FutureInfo, portfolio: MarketPortfolio) {
-    const { id: marketId, underlyingDecimals } = market.descriptor;
+    const { id: marketId, underlyingName, underlyingDecimals, sourceName, instrumentName } = market.descriptor;
     const { id: futureId } = future;
 
     const maxTradeSize = this.configService.get('trading.maxTradeSize')
@@ -241,7 +270,8 @@ export class AppService {
     const marketState = await this.getCurrentMarketState(future, portfolio, tradeQuote)
 
     this.logger.log(
-      `Current market state: ` +
+      `Current market state ` +
+      `name: ${sourceName} ${instrumentName} ${underlyingName}, ` +
       `dv01: ${marketState.dv01}, ` +
       `market rate: ${marketState.marketRate}, ` +
       `avg rate: ${marketState.avgRate}, `
@@ -250,6 +280,7 @@ export class AppService {
     const tradeDirection = this.getTradeDirection(market, marketState)
 
     if(tradeDirection === null) {
+      this.logger.warn(`Trade direction is null, skip trading`)
       return false
     }
 
@@ -266,7 +297,7 @@ export class AppService {
       notional,
       futureRateLimit,
       depositAmount, // toBigInt(1, underlyingDecimals),
-      deadline: Date.now() + 30 * 1000
+      deadline: Date.now() + 3 * 60 * 1000
     }
 
     this.logger.log(
@@ -278,8 +309,8 @@ export class AppService {
       `depositAmount: ${tradeParams.depositAmount}, ` +
       `deadline: ${tradeParams.deadline}`
     )
-    const tx = await this.web3Service.executeTrade(tradeParams);
-    this.logger.log(`Trade completed! txnHash: ${tx.hash}`)
-    this.tradeHistory.set(tx.hash, tradeParams)
+    const txReceipt = await this.web3Service.executeTrade(tradeParams);
+    this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`)
+    this.tradeHistory.set(txReceipt.hash, tradeParams)
   }
 }
