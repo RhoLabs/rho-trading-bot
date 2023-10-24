@@ -206,6 +206,11 @@ export class AppService {
       pPay = 1 - pReceive
     }
 
+    if(marketRate === 0n && dv01 === 0n && avgRate === 0n) {
+      pReceive = 0.5
+      pReceive = 1 - pReceive
+    }
+
     if(pReceive === 0 && pPay === 0) {
       return null
     }
@@ -255,7 +260,8 @@ export class AppService {
     const { id: futureId } = future;
 
     const maxTradeSize = this.configService.get('trading.maxTradeSize')
-    const notionalInteger = generateRandom(Math.floor(maxTradeSize / 10), maxTradeSize, Math.floor(maxTradeSize / 10));
+    const randomValue = generateRandom(maxTradeSize, maxTradeSize * 10, maxTradeSize);
+    const notionalInteger = randomValue / 10
     const notional = toBigInt(notionalInteger, underlyingDecimals);
 
     const tradeQuote = await this.web3Service.quoteTrade(
