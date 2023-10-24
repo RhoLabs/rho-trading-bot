@@ -21,6 +21,7 @@ export default () => ({
     maxRisk: parseInt(process.env.TRADE_MAX_RISK || '1'),
     // Max notional value [USDT]
     maxTradeSize: parseInt(process.env.TRADE_MAX_SIZE || '1000'),
+    // Max losses / day [USD]
     warningLosses: parseInt(process.env.TRADE_WARNING_LOSSES || '1000'),
     riskLevel: parseInt(process.env.TRADE_RISK_LEVEL || '100')
   }

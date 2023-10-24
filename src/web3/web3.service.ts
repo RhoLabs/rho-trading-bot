@@ -4,6 +4,8 @@ import { FutureInfo, MarketInfo, MarketOraclePackages, MarketPortfolio, RiskDire
 import {OracleService} from "../oracle/oracle.service";
 import { ethers, JsonRpcProvider, Contract, Wallet, Provider, TransactionReceipt, formatEther, formatUnits } from "ethers";
 import { ERC20ABI, QuoterABI, RouterABI, ViewDataProviderABI } from "./abi";
+import { CoinGeckoTokenId, MarketApiService } from "../marketapi/marketapi.service";
+import { fromBigInt, profitAndLossTotal } from "../utils";
 
 export interface ExecuteTradeParams {
   marketId: string
@@ -27,7 +29,8 @@ export class Web3Service {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly oracleService: OracleService
+    private readonly oracleService: OracleService,
+    private readonly marketApiService: MarketApiService
   ) {
     const privateKey = configService.get('privateKey');
     if (!privateKey) {
@@ -234,6 +237,22 @@ export class Web3Service {
   ): Promise<MarketPortfolio> {
     const oraclePackage = await this.oracleService.getOraclePackage(marketId)
     return await this.viewContract.marketPortfolio(marketId, userAddress, [oraclePackage])
+  }
+
+  async getProfitAndLoss() {
+    const portfolio = await this.getPortfolio()
+    let totalProfitAndLoss = 0
+    for(let portfolioItem of portfolio) {
+      const {
+        descriptor: { underlyingName, underlyingDecimals },
+        marginState: { margin: { profitAndLoss } }
+      } = portfolioItem
+      const tokenName = underlyingName.toLowerCase().includes('eth') ? CoinGeckoTokenId.ethereum : CoinGeckoTokenId.tether
+      const tokenPriceUsd = await this.marketApiService.getTokenPrice(tokenName)
+      const itemPL = profitAndLossTotal(profitAndLoss)
+      totalProfitAndLoss += +fromBigInt(itemPL, underlyingDecimals) * tokenPriceUsd
+    }
+    return totalProfitAndLoss
   }
 
   async quoteTrade(

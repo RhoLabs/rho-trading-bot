@@ -9,10 +9,10 @@ import {
   RiskDirectionType,
   TradeQuote
 } from "./types";
-import { fromBigInt, generateRandom, getMax, marginTotal, profitAndLossTotal, toBigInt } from "./utils";
+import { generateRandom, getMax, marginTotal, toBigInt } from "./utils";
 import { LRUCache } from 'lru-cache';
 import { CronTime } from "cron";
-import { CoinGeckoTokenId, MarketApiService } from "./marketapi/marketapi.service";
+import { MarketApiService } from "./marketapi/marketapi.service";
 
 interface CurrentMarketState {
   dv01: bigint;
@@ -28,6 +28,7 @@ export class AppService {
     max: 1000,
     ttl: 30 * 24 * 60 * 60 * 1000
   })
+  private readonly startTimestamp = Date.now()
   private initialPL = 0
 
   constructor(
@@ -65,20 +66,8 @@ export class AppService {
         }`,
     );
 
-    const portfolio = await this.web3Service.getPortfolio()
-    let initialPL = 0
-    for(let portfolioItem of portfolio) {
-      const {
-        descriptor: { underlyingName, underlyingDecimals },
-        marginState: { margin: { profitAndLoss } }
-      } = portfolioItem
-      const tokenName = underlyingName.toLowerCase().includes('eth') ? CoinGeckoTokenId.ethereum : CoinGeckoTokenId.tether
-      const tokenPriceUsd = await this.marketApiService.getTokenPrice(tokenName)
-      const itemPL = profitAndLossTotal(profitAndLoss)
-      initialPL+= +fromBigInt(itemPL, underlyingDecimals) * tokenPriceUsd
-    }
-    this.initialPL = initialPL
-    this.logger.log(`Initial P&L: ${initialPL} USD`)
+    this.initialPL = await this.web3Service.getProfitAndLoss()
+    this.logger.log(`Initial P&L: ${this.initialPL} USD`)
 
     const job = this.schedulerRegistry.getCronJob('update');
     job.start()
@@ -96,11 +85,19 @@ export class AppService {
 
   @Cron('*/10 * * * * *', {
     name: 'update',
-    disabled: false,
+    disabled: true,
   })
   async runUpdate() {
     const job = this.schedulerRegistry.getCronJob('update');
     job.stop();
+
+    if(Date.now() - this.startTimestamp > 24 * 60 * 60 * 1000) {
+      const configWarningLosses = this.configService.get('trading.warningLosses')
+      const currentPL = await this.web3Service.getProfitAndLoss()
+      if(this.initialPL - currentPL > configWarningLosses) {
+        this.logger.warn(`ALERT: Current P&L $${currentPL} dropped below initial P&L $${this.initialPL} by $${configWarningLosses}`)
+      }
+    }
 
     const configMarketIds = this.configService.get('marketIds') as string[];
     const configFutureIds = this.configService.get('futureIds') as string[];
