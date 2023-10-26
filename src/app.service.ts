@@ -120,7 +120,8 @@ export class AppService {
         try {
           await this.initiateTrade(market, future, portfolio);
         } catch (e) {
-          this.logger.error(`Error on trading future ${future.id}: ${(e as Error).message}`)
+          this.logger.error(`Error on trading future ${future.id}: ${(e as Error).message}, exit`)
+          process.exit(1)
         }
       }
     }
