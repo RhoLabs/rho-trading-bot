@@ -5,30 +5,8 @@
     "type": "constructor"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "addressValue",
-        "type": "address"
-      }
-    ],
-    "name": "AddressAlreadyExists",
-    "type": "error"
-  },
-  {
     "inputs": [],
     "name": "AddressCannotBeZero",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "addressValue",
-        "type": "address"
-      }
-    ],
-    "name": "AddressNotFound",
     "type": "error"
   },
   {
@@ -39,7 +17,172 @@
         "type": "address"
       }
     ],
-    "name": "ContractNotRegistered",
+    "name": "AddressNotSupportIAccessControlManagerInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contarctAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportICollateralManagerInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIContractProviderInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIFloatIndexOracleInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIFloatRateIndexStorageInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIFutureInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIFutureStorageInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIIdentifiableInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIIssuerInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIMarketConfiguratorInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIMarketInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIMarketStorageInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIRateMathInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIRouterInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIVAMMInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIVAMMStorageInterface",
     "type": "error"
   },
   {
@@ -71,6 +214,28 @@
   {
     "inputs": [],
     "name": "DepositIsPaused",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "value",
+        "type": "uint32"
+      }
+    ],
+    "name": "ExpirationSecondsParamTooBig",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "value",
+        "type": "uint32"
+      }
+    ],
+    "name": "ExpirationSecondsParamTooSmall",
     "type": "error"
   },
   {
@@ -134,50 +299,7 @@
   },
   {
     "inputs": [],
-    "name": "FutureOpenInterestMustBeZero",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "id",
-        "type": "bytes32"
-      }
-    ],
-    "name": "IdAlreadyExists",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "id",
-        "type": "bytes32"
-      }
-    ],
-    "name": "IdNotFound",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "IndexByMaturityDoesNotExist",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "index",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "size",
-        "type": "uint256"
-      }
-    ],
-    "name": "IndexOutOfBounds",
     "type": "error"
   },
   {
@@ -215,6 +337,17 @@
   {
     "inputs": [],
     "name": "IntervalLengthCannotBeZero",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "SD1x18",
+        "name": "value",
+        "type": "int64"
+      }
+    ],
+    "name": "InvalidHedgeMarginFactor",
     "type": "error"
   },
   {
@@ -258,12 +391,34 @@
   {
     "inputs": [
       {
+        "internalType": "UD2x18",
+        "name": "value",
+        "type": "uint64"
+      }
+    ],
+    "name": "InvalidPositionLiquidationRewardPercentage",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "UD60x18",
         "name": "value",
         "type": "uint256"
       }
     ],
     "name": "InvalidPositionPercentage",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "UD2x18",
+        "name": "value",
+        "type": "uint64"
+      }
+    ],
+    "name": "InvalidProvisionCancellationRewardPercentage",
     "type": "error"
   },
   {
@@ -294,8 +449,40 @@
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "UD2x18",
+        "name": "value",
+        "type": "uint64"
+      }
+    ],
+    "name": "InvalidTransferOwnershipRewardPercentage",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "LiquidationIsPaused",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "LiquidationThresholdDeltaCannotBeZero",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "UD2x18",
+        "name": "liquidationThresholdDelta",
+        "type": "uint64"
+      },
+      {
+        "internalType": "UD2x18",
+        "name": "marginThresholdDelta",
+        "type": "uint64"
+      }
+    ],
+    "name": "LiquidationThresholdDeltaMustBeLessMarginThresholdDelta",
     "type": "error"
   },
   {
@@ -310,18 +497,54 @@
   },
   {
     "inputs": [],
-    "name": "MarketIsNotPaused",
+    "name": "MarginThresholdDeltaCannotBeZero",
     "type": "error"
   },
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "futuresCount",
-        "type": "uint256"
+        "internalType": "UD2x18",
+        "name": "value",
+        "type": "uint64"
       }
     ],
-    "name": "MarketMustBeEmpty",
+    "name": "MarginThresholdToleranceTooBig",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MarketIsNotPaused",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MaturityLockoutSecondsCannotBeZero",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MaxRateImpactPerTradeCannotBeZero",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "UD2x18",
+        "name": "minLpFee",
+        "type": "uint64"
+      },
+      {
+        "internalType": "UD2x18",
+        "name": "minProtocolFee",
+        "type": "uint64"
+      }
+    ],
+    "name": "MinFeeSumCannotBeZero",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MinNotionalCannotBeZero",
     "type": "error"
   },
   {
@@ -852,9 +1075,9 @@
               {
                 "components": [
                   {
-                    "internalType": "UD60x18",
+                    "internalType": "UD2x18",
                     "name": "minNotional",
-                    "type": "uint256"
+                    "type": "uint64"
                   },
                   {
                     "internalType": "UD2x18",
@@ -945,7 +1168,7 @@
                   },
                   {
                     "internalType": "UD2x18",
-                    "name": "protocolMinFee",
+                    "name": "minProtocolFee",
                     "type": "uint64"
                   }
                 ],
@@ -1416,6 +1639,21 @@
             "type": "tuple"
           },
           {
+            "internalType": "UD60x18",
+            "name": "totalFutureProvisionPayerDv01",
+            "type": "uint256"
+          },
+          {
+            "internalType": "UD60x18",
+            "name": "totalFutureProvisionReceiverDv01",
+            "type": "uint256"
+          },
+          {
+            "internalType": "UD60x18",
+            "name": "newMarginThreshold",
+            "type": "uint256"
+          },
+          {
             "components": [
               {
                 "internalType": "UD60x18",
@@ -1434,22 +1672,360 @@
               }
             ],
             "internalType": "struct ProvisionDistribution",
-            "name": "totalFutureProvisionDv01",
+            "name": "newProvisionDistribution",
             "type": "tuple"
           },
           {
             "internalType": "UD60x18",
-            "name": "newMarginThreshold",
+            "name": "newProvisionNotionalDv01",
             "type": "uint256"
           },
           {
-            "internalType": "UD60x18",
-            "name": "provisionNotionalDv01",
-            "type": "uint256"
+            "components": [
+              {
+                "components": [
+                  {
+                    "internalType": "MarketId",
+                    "name": "id",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "sourceName",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "instrumentName",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "tag",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "uint16",
+                    "name": "version",
+                    "type": "uint16"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "underlying",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "underlyingName",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "uint8",
+                    "name": "underlyingDecimals",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "bool",
+                    "name": "underlyingIsWrappedNativeToken",
+                    "type": "bool"
+                  },
+                  {
+                    "internalType": "enum IRateMath.MathType",
+                    "name": "rateMathType",
+                    "type": "uint8"
+                  }
+                ],
+                "internalType": "struct IViewDataProvider.MarketDescriptor",
+                "name": "descriptor",
+                "type": "tuple"
+              },
+              {
+                "components": [
+                  {
+                    "components": [
+                      {
+                        "components": [
+                          {
+                            "internalType": "SD59x18",
+                            "name": "netFutureValue",
+                            "type": "int256"
+                          },
+                          {
+                            "internalType": "UD60x18",
+                            "name": "accruedLPFee",
+                            "type": "uint256"
+                          },
+                          {
+                            "internalType": "UD60x18",
+                            "name": "incurredFee",
+                            "type": "uint256"
+                          }
+                        ],
+                        "internalType": "struct ProfitAndLoss.Value",
+                        "name": "profitAndLoss",
+                        "type": "tuple"
+                      },
+                      {
+                        "internalType": "SD59x18",
+                        "name": "collateral",
+                        "type": "int256"
+                      }
+                    ],
+                    "internalType": "struct Margin.Value",
+                    "name": "margin",
+                    "type": "tuple"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "initialMarginThreshold",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "liquidationMarginThreshold",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "lpMarginThreshold",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "dv01",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "enum RiskDirection.Value",
+                    "name": "riskDirection",
+                    "type": "uint8"
+                  }
+                ],
+                "internalType": "struct ViewDataProviderLogic.MarginState",
+                "name": "marginState",
+                "type": "tuple"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "FutureId",
+                    "name": "id",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "MarketId",
+                    "name": "marketId",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "uint64",
+                    "name": "termStart",
+                    "type": "uint64"
+                  },
+                  {
+                    "internalType": "uint64",
+                    "name": "termLength",
+                    "type": "uint64"
+                  },
+                  {
+                    "components": [
+                      {
+                        "internalType": "SD59x18",
+                        "name": "lowerBoundRate",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "SD59x18",
+                        "name": "currentFutureRate",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "SD59x18",
+                        "name": "upperBoundRate",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "UD60x18",
+                        "name": "intervalLength",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "uint256",
+                        "name": "intervalsCount",
+                        "type": "uint256"
+                      }
+                    ],
+                    "internalType": "struct IViewDataProvider.VAMMParams",
+                    "name": "vAMMParams",
+                    "type": "tuple"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "totalLiquidityNotional",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "openInterest",
+                    "type": "uint256"
+                  }
+                ],
+                "internalType": "struct IViewDataProvider.FutureInfo[]",
+                "name": "futures",
+                "type": "tuple[]"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "FutureId",
+                    "name": "futureId",
+                    "type": "bytes32"
+                  },
+                  {
+                    "components": [
+                      {
+                        "internalType": "SD59x18",
+                        "name": "fixedTokenAmount",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "SD59x18",
+                        "name": "floatTokenAmount",
+                        "type": "int256"
+                      }
+                    ],
+                    "internalType": "struct FixedAndFloatTokensPair.Value",
+                    "name": "tokensPair",
+                    "type": "tuple"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "notional",
+                    "type": "uint256"
+                  },
+                  {
+                    "components": [
+                      {
+                        "internalType": "SD59x18",
+                        "name": "netFutureValue",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "UD60x18",
+                        "name": "accruedLPFee",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "UD60x18",
+                        "name": "incurredFee",
+                        "type": "uint256"
+                      }
+                    ],
+                    "internalType": "struct ProfitAndLoss.Value",
+                    "name": "profitAndLoss",
+                    "type": "tuple"
+                  },
+                  {
+                    "internalType": "SD59x18",
+                    "name": "requiredMargin",
+                    "type": "int256"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "dv01",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "enum RiskDirection.Value",
+                    "name": "riskDirection",
+                    "type": "uint8"
+                  }
+                ],
+                "internalType": "struct IViewDataProvider.FutureOpenPosition[]",
+                "name": "futureOpenPositions",
+                "type": "tuple[]"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "FutureId",
+                    "name": "futureId",
+                    "type": "bytes32"
+                  },
+                  {
+                    "components": [
+                      {
+                        "components": [
+                          {
+                            "internalType": "SD59x18",
+                            "name": "lower",
+                            "type": "int256"
+                          },
+                          {
+                            "internalType": "SD59x18",
+                            "name": "upper",
+                            "type": "int256"
+                          }
+                        ],
+                        "internalType": "struct RateBounds",
+                        "name": "bounds",
+                        "type": "tuple"
+                      },
+                      {
+                        "components": [
+                          {
+                            "internalType": "UD60x18",
+                            "name": "total",
+                            "type": "uint256"
+                          },
+                          {
+                            "internalType": "UD60x18",
+                            "name": "payer",
+                            "type": "uint256"
+                          },
+                          {
+                            "internalType": "UD60x18",
+                            "name": "receiver",
+                            "type": "uint256"
+                          }
+                        ],
+                        "internalType": "struct ProvisionDistribution",
+                        "name": "notional",
+                        "type": "tuple"
+                      },
+                      {
+                        "internalType": "SD59x18",
+                        "name": "requiredMargin",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "UD60x18",
+                        "name": "payerDv01",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "UD60x18",
+                        "name": "receiverDv01",
+                        "type": "uint256"
+                      }
+                    ],
+                    "internalType": "struct IViewDataProvider.ProvisionInfo[]",
+                    "name": "provisions",
+                    "type": "tuple[]"
+                  }
+                ],
+                "internalType": "struct IViewDataProvider.MakerFutureProvisions[]",
+                "name": "futureMakerProvisions",
+                "type": "tuple[]"
+              }
+            ],
+            "internalType": "struct IViewDataProvider.MarketPortfolio",
+            "name": "marketPortfolio",
+            "type": "tuple"
           }
         ],
-        "internalType": "struct LiquidityQuote",
-        "name": "liquidityQuote",
+        "internalType": "struct IQuoter.LiquidityProvisionQuote",
+        "name": "",
         "type": "tuple"
       }
     ],
@@ -1835,9 +2411,352 @@
             "internalType": "struct OneDirectionTradeQuote",
             "name": "receiverQuote",
             "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "components": [
+                  {
+                    "internalType": "MarketId",
+                    "name": "id",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "sourceName",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "instrumentName",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "tag",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "uint16",
+                    "name": "version",
+                    "type": "uint16"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "underlying",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "underlyingName",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "uint8",
+                    "name": "underlyingDecimals",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "bool",
+                    "name": "underlyingIsWrappedNativeToken",
+                    "type": "bool"
+                  },
+                  {
+                    "internalType": "enum IRateMath.MathType",
+                    "name": "rateMathType",
+                    "type": "uint8"
+                  }
+                ],
+                "internalType": "struct IViewDataProvider.MarketDescriptor",
+                "name": "descriptor",
+                "type": "tuple"
+              },
+              {
+                "components": [
+                  {
+                    "components": [
+                      {
+                        "components": [
+                          {
+                            "internalType": "SD59x18",
+                            "name": "netFutureValue",
+                            "type": "int256"
+                          },
+                          {
+                            "internalType": "UD60x18",
+                            "name": "accruedLPFee",
+                            "type": "uint256"
+                          },
+                          {
+                            "internalType": "UD60x18",
+                            "name": "incurredFee",
+                            "type": "uint256"
+                          }
+                        ],
+                        "internalType": "struct ProfitAndLoss.Value",
+                        "name": "profitAndLoss",
+                        "type": "tuple"
+                      },
+                      {
+                        "internalType": "SD59x18",
+                        "name": "collateral",
+                        "type": "int256"
+                      }
+                    ],
+                    "internalType": "struct Margin.Value",
+                    "name": "margin",
+                    "type": "tuple"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "initialMarginThreshold",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "liquidationMarginThreshold",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "lpMarginThreshold",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "dv01",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "enum RiskDirection.Value",
+                    "name": "riskDirection",
+                    "type": "uint8"
+                  }
+                ],
+                "internalType": "struct ViewDataProviderLogic.MarginState",
+                "name": "marginState",
+                "type": "tuple"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "FutureId",
+                    "name": "id",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "MarketId",
+                    "name": "marketId",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "uint64",
+                    "name": "termStart",
+                    "type": "uint64"
+                  },
+                  {
+                    "internalType": "uint64",
+                    "name": "termLength",
+                    "type": "uint64"
+                  },
+                  {
+                    "components": [
+                      {
+                        "internalType": "SD59x18",
+                        "name": "lowerBoundRate",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "SD59x18",
+                        "name": "currentFutureRate",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "SD59x18",
+                        "name": "upperBoundRate",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "UD60x18",
+                        "name": "intervalLength",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "uint256",
+                        "name": "intervalsCount",
+                        "type": "uint256"
+                      }
+                    ],
+                    "internalType": "struct IViewDataProvider.VAMMParams",
+                    "name": "vAMMParams",
+                    "type": "tuple"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "totalLiquidityNotional",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "openInterest",
+                    "type": "uint256"
+                  }
+                ],
+                "internalType": "struct IViewDataProvider.FutureInfo[]",
+                "name": "futures",
+                "type": "tuple[]"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "FutureId",
+                    "name": "futureId",
+                    "type": "bytes32"
+                  },
+                  {
+                    "components": [
+                      {
+                        "internalType": "SD59x18",
+                        "name": "fixedTokenAmount",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "SD59x18",
+                        "name": "floatTokenAmount",
+                        "type": "int256"
+                      }
+                    ],
+                    "internalType": "struct FixedAndFloatTokensPair.Value",
+                    "name": "tokensPair",
+                    "type": "tuple"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "notional",
+                    "type": "uint256"
+                  },
+                  {
+                    "components": [
+                      {
+                        "internalType": "SD59x18",
+                        "name": "netFutureValue",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "UD60x18",
+                        "name": "accruedLPFee",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "UD60x18",
+                        "name": "incurredFee",
+                        "type": "uint256"
+                      }
+                    ],
+                    "internalType": "struct ProfitAndLoss.Value",
+                    "name": "profitAndLoss",
+                    "type": "tuple"
+                  },
+                  {
+                    "internalType": "SD59x18",
+                    "name": "requiredMargin",
+                    "type": "int256"
+                  },
+                  {
+                    "internalType": "UD60x18",
+                    "name": "dv01",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "enum RiskDirection.Value",
+                    "name": "riskDirection",
+                    "type": "uint8"
+                  }
+                ],
+                "internalType": "struct IViewDataProvider.FutureOpenPosition[]",
+                "name": "futureOpenPositions",
+                "type": "tuple[]"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "FutureId",
+                    "name": "futureId",
+                    "type": "bytes32"
+                  },
+                  {
+                    "components": [
+                      {
+                        "components": [
+                          {
+                            "internalType": "SD59x18",
+                            "name": "lower",
+                            "type": "int256"
+                          },
+                          {
+                            "internalType": "SD59x18",
+                            "name": "upper",
+                            "type": "int256"
+                          }
+                        ],
+                        "internalType": "struct RateBounds",
+                        "name": "bounds",
+                        "type": "tuple"
+                      },
+                      {
+                        "components": [
+                          {
+                            "internalType": "UD60x18",
+                            "name": "total",
+                            "type": "uint256"
+                          },
+                          {
+                            "internalType": "UD60x18",
+                            "name": "payer",
+                            "type": "uint256"
+                          },
+                          {
+                            "internalType": "UD60x18",
+                            "name": "receiver",
+                            "type": "uint256"
+                          }
+                        ],
+                        "internalType": "struct ProvisionDistribution",
+                        "name": "notional",
+                        "type": "tuple"
+                      },
+                      {
+                        "internalType": "SD59x18",
+                        "name": "requiredMargin",
+                        "type": "int256"
+                      },
+                      {
+                        "internalType": "UD60x18",
+                        "name": "payerDv01",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "UD60x18",
+                        "name": "receiverDv01",
+                        "type": "uint256"
+                      }
+                    ],
+                    "internalType": "struct IViewDataProvider.ProvisionInfo[]",
+                    "name": "provisions",
+                    "type": "tuple[]"
+                  }
+                ],
+                "internalType": "struct IViewDataProvider.MakerFutureProvisions[]",
+                "name": "futureMakerProvisions",
+                "type": "tuple[]"
+              }
+            ],
+            "internalType": "struct IViewDataProvider.MarketPortfolio",
+            "name": "marketPortfolio",
+            "type": "tuple"
           }
         ],
-        "internalType": "struct TradeQuote",
+        "internalType": "struct IQuoter.TradeQuote",
         "name": "result",
         "type": "tuple"
       }
@@ -1850,6 +2769,25 @@
     "name": "renounceOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes4",
+        "name": "interfaceId",
+        "type": "bytes4"
+      }
+    ],
+    "name": "supportsInterface",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {

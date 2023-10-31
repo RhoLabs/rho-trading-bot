@@ -5,30 +5,8 @@
     "type": "constructor"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "addressValue",
-        "type": "address"
-      }
-    ],
-    "name": "AddressAlreadyExists",
-    "type": "error"
-  },
-  {
     "inputs": [],
     "name": "AddressCannotBeZero",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "addressValue",
-        "type": "address"
-      }
-    ],
-    "name": "AddressNotFound",
     "type": "error"
   },
   {
@@ -39,7 +17,172 @@
         "type": "address"
       }
     ],
-    "name": "ContractNotRegistered",
+    "name": "AddressNotSupportIAccessControlManagerInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contarctAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportICollateralManagerInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIContractProviderInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIFloatIndexOracleInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIFloatRateIndexStorageInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIFutureInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIFutureStorageInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIIdentifiableInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIIssuerInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIMarketConfiguratorInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIMarketInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIMarketStorageInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIRateMathInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIRouterInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIVAMMInterface",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressNotSupportIVAMMStorageInterface",
     "type": "error"
   },
   {
@@ -71,6 +214,28 @@
   {
     "inputs": [],
     "name": "DepositIsPaused",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "value",
+        "type": "uint32"
+      }
+    ],
+    "name": "ExpirationSecondsParamTooBig",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "value",
+        "type": "uint32"
+      }
+    ],
+    "name": "ExpirationSecondsParamTooSmall",
     "type": "error"
   },
   {
@@ -160,50 +325,7 @@
   },
   {
     "inputs": [],
-    "name": "FutureOpenInterestMustBeZero",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "id",
-        "type": "bytes32"
-      }
-    ],
-    "name": "IdAlreadyExists",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "id",
-        "type": "bytes32"
-      }
-    ],
-    "name": "IdNotFound",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "IndexByMaturityDoesNotExist",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "index",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "size",
-        "type": "uint256"
-      }
-    ],
-    "name": "IndexOutOfBounds",
     "type": "error"
   },
   {
@@ -262,6 +384,17 @@
   {
     "inputs": [
       {
+        "internalType": "SD1x18",
+        "name": "value",
+        "type": "int64"
+      }
+    ],
+    "name": "InvalidHedgeMarginFactor",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
         "components": [
           {
             "internalType": "MarketId",
@@ -300,12 +433,34 @@
   {
     "inputs": [
       {
+        "internalType": "UD2x18",
+        "name": "value",
+        "type": "uint64"
+      }
+    ],
+    "name": "InvalidPositionLiquidationRewardPercentage",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "UD60x18",
         "name": "value",
         "type": "uint256"
       }
     ],
     "name": "InvalidPositionPercentage",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "UD2x18",
+        "name": "value",
+        "type": "uint64"
+      }
+    ],
+    "name": "InvalidProvisionCancellationRewardPercentage",
     "type": "error"
   },
   {
@@ -336,8 +491,40 @@
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "UD2x18",
+        "name": "value",
+        "type": "uint64"
+      }
+    ],
+    "name": "InvalidTransferOwnershipRewardPercentage",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "LiquidationIsPaused",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "LiquidationThresholdDeltaCannotBeZero",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "UD2x18",
+        "name": "liquidationThresholdDelta",
+        "type": "uint64"
+      },
+      {
+        "internalType": "UD2x18",
+        "name": "marginThresholdDelta",
+        "type": "uint64"
+      }
+    ],
+    "name": "LiquidationThresholdDeltaMustBeLessMarginThresholdDelta",
     "type": "error"
   },
   {
@@ -352,18 +539,54 @@
   },
   {
     "inputs": [],
-    "name": "MarketIsNotPaused",
+    "name": "MarginThresholdDeltaCannotBeZero",
     "type": "error"
   },
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "futuresCount",
-        "type": "uint256"
+        "internalType": "UD2x18",
+        "name": "value",
+        "type": "uint64"
       }
     ],
-    "name": "MarketMustBeEmpty",
+    "name": "MarginThresholdToleranceTooBig",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MarketIsNotPaused",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MaturityLockoutSecondsCannotBeZero",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MaxRateImpactPerTradeCannotBeZero",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "UD2x18",
+        "name": "minLpFee",
+        "type": "uint64"
+      },
+      {
+        "internalType": "UD2x18",
+        "name": "minProtocolFee",
+        "type": "uint64"
+      }
+    ],
+    "name": "MinFeeSumCannotBeZero",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MinNotionalCannotBeZero",
     "type": "error"
   },
   {
@@ -952,6 +1175,19 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Paused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "MarketId",
         "name": "marketId",
@@ -977,6 +1213,19 @@
       }
     ],
     "name": "ProtocolFeeCollection",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Unpaused",
     "type": "event"
   },
   {
@@ -1349,6 +1598,19 @@
   },
   {
     "inputs": [],
+    "name": "getAcm",
+    "outputs": [
+      {
+        "internalType": "contract IAccessControlManager",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "getContractProvider",
     "outputs": [
       {
@@ -1501,6 +1763,26 @@
       }
     ],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paused",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1835,6 +2117,25 @@
   {
     "inputs": [
       {
+        "internalType": "bytes4",
+        "name": "interfaceId",
+        "type": "bytes4"
+      }
+    ],
+    "name": "supportsInterface",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "MarketId",
         "name": "marketId",
         "type": "bytes32"
@@ -1896,6 +2197,13 @@
       }
     ],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "unpause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
