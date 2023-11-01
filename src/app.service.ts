@@ -88,45 +88,49 @@ export class AppService {
     disabled: true,
   })
   async runUpdate() {
+    const configMarketIds = this.configService.get('marketIds') as string[];
+    const configFutureIds = this.configService.get('futureIds') as string[];
+    const configWarningLosses = this.configService.get('trading.warningLosses')
+    const avgInterval = this.configService.get('trading.avgInterval')
+
     const job = this.schedulerRegistry.getCronJob('update');
     job.stop();
 
-    if(Date.now() - this.startTimestamp > 24 * 60 * 60 * 1000) {
-      const configWarningLosses = this.configService.get('trading.warningLosses')
-      const currentPL = await this.web3Service.getProfitAndLoss()
-      if(this.initialPL - currentPL > configWarningLosses) {
-        this.logger.warn(`ALERT: Current P&L $${currentPL} dropped below initial P&L $${this.initialPL} by $${configWarningLosses}`)
-      }
-    }
-
-    const configMarketIds = this.configService.get('marketIds') as string[];
-    const configFutureIds = this.configService.get('futureIds') as string[];
-
-    let markets = (await this.web3Service.activeMarketsInfo())
-
-    if(configMarketIds.length > 0) {
-      markets = markets.filter((item) => configMarketIds.includes(item.descriptor.id.toLowerCase()));
-    }
-
-    for (let market of markets) {
-      let futures = market.futures
-
-      if(configFutureIds.length > 0) {
-        futures = futures.filter((future) => configFutureIds.includes(future.id.toLowerCase()));
-      }
-
-      const portfolio = await this.web3Service.getMarketPortfolio(market.descriptor.id)
-      for (let future of futures) {
-        try {
-          await this.initiateTrade(market, future, portfolio);
-        } catch (e) {
-          this.logger.error(`Error on trading future ${future.id}: ${(e as Error).message}, exit`)
-          process.exit(1)
+    try {
+      if(Date.now() - this.startTimestamp > 24 * 60 * 60 * 1000) {
+        const currentPL = await this.web3Service.getProfitAndLoss()
+        if(this.initialPL - currentPL > configWarningLosses) {
+          this.logger.warn(`ALERT: Current P&L $${currentPL} dropped below initial P&L $${this.initialPL} by $${configWarningLosses}`)
         }
       }
+
+      let markets = (await this.web3Service.activeMarketsInfo())
+
+      if(configMarketIds.length > 0) {
+        markets = markets.filter((item) => configMarketIds.includes(item.descriptor.id.toLowerCase()));
+      }
+
+      for (let market of markets) {
+        let futures = market.futures
+
+        if(configFutureIds.length > 0) {
+          futures = futures.filter((future) => configFutureIds.includes(future.id.toLowerCase()));
+        }
+
+        const portfolio = await this.web3Service.getMarketPortfolio(market.descriptor.id)
+        for (let future of futures) {
+          try {
+            await this.initiateTrade(market, future, portfolio);
+          } catch (e) {
+            this.logger.error(`Error on trading future ${future.id}: ${(e as Error).message}, exit`)
+            process.exit(1)
+          }
+        }
+      }
+    } catch (e) {
+      this.logger.error(`Trading error: ${(e as Error).message}`)
     }
 
-    const avgInterval = this.configService.get('trading.avgInterval')
     const nextTradingTimeout = generateRandom(
       avgInterval - Math.floor(avgInterval / 2),
       avgInterval + Math.floor(avgInterval / 2),
