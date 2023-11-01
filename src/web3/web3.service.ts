@@ -293,7 +293,7 @@ export class Web3Service {
 
     const receipt = await this.routerContract.executeTrade(...executeTradeArguments,
       {
-        gasLimit: BigInt(Math.round(Number(estimateGas) * 1.3))
+        gasLimit: BigInt(Math.round(Number(estimateGas) * 1.2))
       }
     );
     this.logger.log(`Trade tx sent, receipt txnHash: ${receipt.hash}. Waiting for confirmation...`)
