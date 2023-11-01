@@ -289,11 +289,11 @@ export class Web3Service {
       [oraclePackage]
     ]
 
-    // const estimateGas  = await this.routerContract.executeTrade.estimateGas(...executeTradeArguments)
+    const estimateGas  = await this.routerContract.executeTrade.estimateGas(...executeTradeArguments)
 
     const receipt = await this.routerContract.executeTrade(...executeTradeArguments,
       {
-        gasLimit: 1000000 // BigInt(Math.round(Number(estimateGas) * 1.2))
+        gasLimit: BigInt(Math.round(Number(estimateGas) * 1.3))
       }
     );
     this.logger.log(`Trade tx sent, receipt txnHash: ${receipt.hash}. Waiting for confirmation...`)
