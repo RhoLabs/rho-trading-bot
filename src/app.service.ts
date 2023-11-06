@@ -145,75 +145,76 @@ export class AppService {
     const { underlyingDecimals } = market.descriptor
     const {
       dv01,
-      marketRate,
       riskDirection,
-      avgRate
     } = marketState
     let pReceive = 0, pPay = 0;
+
+    const marketRate = +marketState.marketRate.toString() / 10**18
+    const avgRate = +marketState.avgRate.toString() / 10**18
 
     const maxRisk = toBigInt(this.configService.get('trading.maxRisk'), underlyingDecimals)
     const riskLevel = toBigInt(this.configService.get('trading.riskLevel'), underlyingDecimals)
 
+    const xFactor = this.configService.get('trading.xFactor') / 10**4
+    const yFactor = this.configService.get('trading.yFactor') / 10**4
+    const zFactor = this.configService.get('trading.zFactor') / 10**4
+
     // Rule 1
-    if(dv01 < riskLevel && marketRate > avgRate) {
+    if(dv01 <= riskLevel && marketRate > (1 + xFactor) * avgRate) {
       pReceive = 0.6
-      pPay = 1 - pReceive
     }
     // Rule 2
-    if(dv01 < riskLevel && marketRate < avgRate) {
+    if(dv01 < riskLevel && marketRate < (1 - xFactor) * avgRate) {
       pReceive = 0.4
-      pPay = 1 - pReceive
     }
     // Rule 3.a
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
       (riskDirection === RiskDirectionType.RECEIVER) &&
-      (marketRate < avgRate)
+      (marketRate < (1 - yFactor) * avgRate)
     ) {
       pReceive = 0.1
-      pPay = 1 - pReceive
     }
     // Rule 3.b
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
       (riskDirection === RiskDirectionType.RECEIVER) &&
-      (marketRate > avgRate)
+      (marketRate > (1 + zFactor) * avgRate)
     ) {
       pReceive = 0.6
-      pPay = 1 - pReceive
     }
     // Rule 4.a
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
       (riskDirection === RiskDirectionType.PAYER) &&
-      (marketRate > avgRate)
+      (marketRate > (1 + yFactor) * avgRate)
     ) {
       pReceive = 0.9
-      pPay = 1 - pReceive
     }
     // Rule 4.b
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
       (riskDirection === RiskDirectionType.PAYER) &&
-      (marketRate < avgRate)
+      (marketRate < (1 - zFactor) * avgRate)
     ) {
       pReceive = 0.4
-      pPay = 1 - pReceive
     }
     // Rule 5
     if(dv01 >= maxRisk && riskDirection === RiskDirectionType.RECEIVER) {
       pReceive = 0
-      pPay = 1 - pReceive
     }
     // Rule 6
     if(dv01 >= maxRisk && riskDirection === RiskDirectionType.PAYER) {
       pReceive = 1
-      pPay = 1 - pReceive
     }
 
-    if(marketRate === 0n && dv01 === 0n && avgRate === 0n) {
+    // First start of fresh market
+    if(marketRate === 0 && dv01 === 0n && avgRate === 0) {
       pReceive = 0.5
-      pReceive = 1 - pReceive
+    }
+
+    if(pReceive > 0) {
+      pPay = 1 - pReceive
     }
 
     if(pReceive === 0 && pPay === 0) {
@@ -251,11 +252,14 @@ export class AppService {
     const riskDirection = floatTokenSum === 0n ? null
       : floatTokenSum < 0 ? RiskDirectionType.RECEIVER : RiskDirectionType.PAYER
 
+    const avgRate = this.getAverageRate()
+    console.log('avgRate', avgRate, 'future.vAMMParams.currentFutureRate', future.vAMMParams.currentFutureRate)
+
     const marketState: CurrentMarketState  = {
       dv01,
       marketRate: tradeQuote.receiverQuote.tradeInfo.marketRateBefore,
       riskDirection,
-      avgRate: this.getAverageRate()
+      avgRate: avgRate !== 0n ? avgRate : future.vAMMParams.currentFutureRate
     }
     return marketState
   }
@@ -317,8 +321,8 @@ export class AppService {
       `depositAmount: ${tradeParams.depositAmount}, ` +
       `deadline: ${tradeParams.deadline}`
     )
-    const txReceipt = await this.web3Service.executeTrade(tradeParams);
-    this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`)
-    this.tradeHistory.set(txReceipt.hash, tradeParams)
+    // const txReceipt = await this.web3Service.executeTrade(tradeParams);
+    // this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`)
+    this.tradeHistory.set((Math.random() + 1).toString(36).substring(7), tradeParams)
   }
 }
