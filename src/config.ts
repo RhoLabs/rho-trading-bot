@@ -1,7 +1,7 @@
 export default () => ({
   privateKey: process.env.PRIVATE_KEY || '',
   rpcUrl: process.env.RPC_URL || 'https://arbitrum-goerli.public.blastapi.io',
-  oracleUrl: process.env.ORACLE_URL || 'https://roaracle-test.fly.dev',
+  oracleUrl: process.env.ORACLE_URL || 'https://testnet.roaracle.app',
   oracleServiceApiKey: process.env.ORACLE_SERVICE_API_KEY || '',
   routerContractAddress: process.env.ROUTER_CONTRACT_ADDRESS || '',
   viewContractAddress: process.env.VIEW_CONTRACT_ADDRESS || '',
@@ -17,7 +17,7 @@ export default () => ({
     .map(item => item.trim().toLowerCase()),
   trading: {
     // Average interval between trade attempts [seconds]
-    avgInterval: parseInt(process.env.TRADE_AVERAGE_INTERVAL || '60'),
+    avgInterval: parseInt(process.env.TRADE_AVERAGE_INTERVAL || '600'),
     maxRisk: parseInt(process.env.TRADE_MAX_RISK || '10000'),
     // Max notional value [USDT]
     maxTradeSize: parseInt(process.env.TRADE_MAX_SIZE || '1000'),

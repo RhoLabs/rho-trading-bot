@@ -332,8 +332,8 @@ export class AppService {
       `depositAmount: ${tradeParams.depositAmount}, ` +
       `deadline: ${tradeParams.deadline}`
     )
-    // const txReceipt = await this.web3Service.executeTrade(tradeParams);
-    // this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`)
+    const txReceipt = await this.web3Service.executeTrade(tradeParams);
+    this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`)
     this.tradeHistory.set((Math.random() + 1).toString(36).substring(7), tradeParams)
   }
 }
