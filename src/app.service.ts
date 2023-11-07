@@ -123,8 +123,7 @@ export class AppService {
           try {
             await this.initiateTrade(market, future, portfolio);
           } catch (e) {
-            this.logger.error(`Error on trading future ${future.id}: ${(e as Error).message}, exit`)
-            process.exit(1)
+            this.logger.error(`Error on trading future ${future.id}: ${(e as Error).message}`)
           }
         }
       }
@@ -302,16 +301,19 @@ export class AppService {
       return false
     }
 
+    const currentMargin = marginTotal(portfolio.marginState.margin)
+    console.log('currentMargin', currentMargin)
+    console.log('maxMarginInUse', maxMarginInUse)
+    if(currentMargin > maxMarginInUse) {
+      this.logger.warn(`Current margin: ${currentMargin}, maxMarginInUse: ${maxMarginInUse}, skip this trading attempt`)
+      return false
+    }
+
     const selectedQuote = tradeDirection === RiskDirectionType.RECEIVER ? tradeQuote.receiverQuote : tradeQuote.payerQuote
     const totalMargin = marginTotal(selectedQuote.newMargin)
     const { newMarginThreshold } = selectedQuote
     const depositAmount = getMax(newMarginThreshold - totalMargin, 0n)
     const futureRateLimit = selectedQuote.tradeInfo.tradeRate + BigInt(0.1 * 10**16)*BigInt(tradeDirection === RiskDirectionType.RECEIVER ? -1 : 1)
-
-    if(depositAmount > maxMarginInUse) {
-      this.logger.warn(`Calculated deposit amount: ${depositAmount}, maxMarginInUse: ${maxMarginInUse}, exit`)
-      return false
-    }
 
     const tradeParams: ExecuteTradeParams = {
       marketId,
