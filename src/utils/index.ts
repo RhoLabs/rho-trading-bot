@@ -1,13 +1,19 @@
 import { Margin, ProfitAndLoss } from "../types";
 
-export const generateRandom = (start = 0, end = 1000, increments = 100) => {
-  const numbers = [];
-  for(let n = start; n <= end; n += increments) {
-    numbers.push(n);
-  }
+function getRandomArbitrary(min: number, max: number) {
+  return Math.random() * (max - min) + min;
+}
 
-  const randomIndex = Math.floor(Math.random() * numbers.length);
-  return numbers[randomIndex];
+export const generateRandom = (start: number, end: number, step: number) => {
+  if(step <= 0) {
+    throw new Error('generateRandom: step should be a positive number')
+  }
+  if(start + step > end) {
+    throw new Error('generateRandom: wrong params')
+  }
+  const stepsCount = Math.round((end - start) / step)
+  const randomStepsCount = Math.floor(getRandomArbitrary(1, stepsCount))
+  return start + randomStepsCount * step
 }
 
 export const toBigInt = (value: number, decimalPlaces: bigint | number) => {
