@@ -101,7 +101,8 @@ export class AppService {
       if(Date.now() - this.startTimestamp > 24 * 60 * 60 * 1000) {
         const currentPL = await this.web3Service.getProfitAndLoss()
         if(this.initialPL - currentPL > configWarningLosses) {
-          this.logger.warn(`ALERT: Current P&L $${currentPL} dropped below initial P&L $${this.initialPL} by $${configWarningLosses}`)
+          this.logger.error(`ALERT: Current P&L $${currentPL} dropped below initial P&L $${this.initialPL} by $${configWarningLosses}, stop`)
+          return false
         }
       }
 
@@ -159,7 +160,7 @@ export class AppService {
     const yFactor = this.configService.get('trading.yFactor') / 10**4
     const zFactor = this.configService.get('trading.zFactor') / 10**4
 
-    console.log('marketRate', marketRate, '(1 + xFactor) * avgRate', (1 + xFactor) * avgRate)
+    this.logger.log(`dv01: ${dv01}, riskLevel: ${riskLevel}, maxRisk: ${maxRisk}, avgRate: ${avgRate}`)
 
     // Rule 1
     if(dv01 <= riskLevel && marketRate > (1 + xFactor) * avgRate) {
