@@ -10,7 +10,7 @@ import {
   RiskDirectionType,
   TradeQuote,
 } from './types';
-import { generateRandom, getMax, marginTotal, toBigInt } from './utils';
+import { fromBigInt, generateRandom, getDV01FromNotional, getMax, marginTotal, toBigInt } from "./utils";
 import { LRUCache } from 'lru-cache';
 import { CronTime } from 'cron';
 import { MarketApiService } from './marketapi/marketapi.service';
@@ -141,23 +141,25 @@ export class AppService {
     job.start()
   }
 
-  getTradeDirection(market: MarketInfo, marketState: CurrentMarketState): RiskDirectionType | null {
-    const { underlyingDecimals } = market.descriptor
-    const {
-      dv01,
-      riskDirection,
-    } = marketState
+  getTradeDirection(market: MarketInfo, future: FutureInfo, marketState: CurrentMarketState): RiskDirectionType | null {
+    const { termStart, termLength } = future
+    const { riskDirection} = marketState
+
     let pReceive = 0.5, pPay = 0.5;
 
+    const dv01 = fromBigInt(marketState.dv01, market.descriptor.underlyingDecimals)
+    const secondsToExpiry = +(termStart + termLength).toString() - Math.round(Date.now() / 1000)
     const marketRate = +marketState.marketRate.toString() / 10**18
     const avgRate = +marketState.avgRate.toString() / 10**18
 
-    const maxRisk = toBigInt(this.configService.get('trading.maxRisk'), underlyingDecimals)
-    const riskLevel = toBigInt(this.configService.get('trading.riskLevel'), underlyingDecimals)
+    const maxRisk = getDV01FromNotional(this.configService.get('trading.maxRisk'), secondsToExpiry)
+    const riskLevel = getDV01FromNotional(this.configService.get('trading.riskLevel'), secondsToExpiry)
 
     const xFactor = this.configService.get('trading.xFactor') / 10**4
     const yFactor = this.configService.get('trading.yFactor') / 10**4
     const zFactor = this.configService.get('trading.zFactor') / 10**4
+
+    console.log('marketRate', marketRate, '(1 + xFactor) * avgRate', (1 + xFactor) * avgRate)
 
     // Rule 1
     if(dv01 <= riskLevel && marketRate > (1 + xFactor) * avgRate) {
@@ -209,7 +211,7 @@ export class AppService {
     }
 
     // First start of fresh market
-    if(marketRate === 0 && dv01 === 0n && avgRate === 0) {
+    if(marketRate === 0 && dv01 === 0 && avgRate === 0) {
       pReceive = 0.5
     }
 
@@ -294,7 +296,7 @@ export class AppService {
       `avg rate: ${marketState.avgRate}, `
     )
 
-    const tradeDirection = this.getTradeDirection(market, marketState)
+    const tradeDirection = this.getTradeDirection(market, future, marketState)
 
     if(tradeDirection === null) {
       this.logger.warn(`Trade direction is null, skip trading`)
@@ -302,8 +304,6 @@ export class AppService {
     }
 
     const currentMargin = marginTotal(portfolio.marginState.margin)
-    console.log('currentMargin', currentMargin)
-    console.log('maxMarginInUse', maxMarginInUse)
     if(currentMargin > maxMarginInUse) {
       this.logger.warn(`Current margin: ${currentMargin}, maxMarginInUse: ${maxMarginInUse}, skip this trading attempt`)
       return false

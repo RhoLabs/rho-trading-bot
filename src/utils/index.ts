@@ -17,7 +17,7 @@ export const generateRandom = (start: number, end: number, step: number) => {
 }
 
 export const toBigInt = (value: number, decimalPlaces: bigint | number) => {
-  return BigInt(value) * BigInt(10n ** BigInt(decimalPlaces))
+  return BigInt(Math.round(value)) * BigInt(10n ** BigInt(decimalPlaces))
 }
 
 export const fromBigInt = (value: bigint, decimalPlaces: bigint | number) => {
@@ -46,4 +46,10 @@ export const getMax = (...values) => {
   }
 
   return maxValue;
+}
+
+const secondsInYear = 60 * 60 * 24 * 365
+
+export const getDV01FromNotional = (notionalValue: number, secondsToExpiry: number) => {
+  return notionalValue * 0.0001 * secondsToExpiry / secondsInYear
 }
