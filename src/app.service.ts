@@ -5,14 +5,15 @@ import { ConfigService } from '@nestjs/config';
 import {
   FutureInfo,
   MarketInfo,
-  MarketPortfolio, RiskDirectionAlias,
+  MarketPortfolio,
+  RiskDirectionAlias,
   RiskDirectionType,
-  TradeQuote
-} from "./types";
-import { generateRandom, getMax, marginTotal, toBigInt } from "./utils";
+  TradeQuote,
+} from './types';
+import { fromBigInt, generateRandom, getDV01FromNotional, getMax, marginTotal, toBigInt } from "./utils";
 import { LRUCache } from 'lru-cache';
-import { CronTime } from "cron";
-import { MarketApiService } from "./marketapi/marketapi.service";
+import { CronTime } from 'cron';
+import { MarketApiService } from './marketapi/marketapi.service';
 
 interface CurrentMarketState {
   dv01: bigint;
@@ -100,7 +101,8 @@ export class AppService {
       if(Date.now() - this.startTimestamp > 24 * 60 * 60 * 1000) {
         const currentPL = await this.web3Service.getProfitAndLoss()
         if(this.initialPL - currentPL > configWarningLosses) {
-          this.logger.warn(`ALERT: Current P&L $${currentPL} dropped below initial P&L $${this.initialPL} by $${configWarningLosses}`)
+          this.logger.error(`ALERT: Current P&L $${currentPL} dropped below initial P&L $${this.initialPL} by $${configWarningLosses}, stop`)
+          return false
         }
       }
 
@@ -122,8 +124,7 @@ export class AppService {
           try {
             await this.initiateTrade(market, future, portfolio);
           } catch (e) {
-            this.logger.error(`Error on trading future ${future.id}: ${(e as Error).message}, exit`)
-            process.exit(1)
+            this.logger.error(`Error on trading future ${future.id}: ${(e as Error).message}`)
           }
         }
       }
@@ -141,80 +142,85 @@ export class AppService {
     job.start()
   }
 
-  getTradeDirection(market: MarketInfo, marketState: CurrentMarketState): RiskDirectionType | null {
-    const { underlyingDecimals } = market.descriptor
-    const {
-      dv01,
-      marketRate,
-      riskDirection,
-      avgRate
-    } = marketState
-    let pReceive = 0, pPay = 0;
+  getTradeDirection(market: MarketInfo, future: FutureInfo, marketState: CurrentMarketState): RiskDirectionType | null {
+    const { termStart, termLength } = future
+    const { riskDirection} = marketState
 
-    const maxRisk = toBigInt(this.configService.get('trading.maxRisk'), underlyingDecimals)
-    const riskLevel = toBigInt(this.configService.get('trading.riskLevel'), underlyingDecimals)
+    let pReceive = 0.5, pPay = 0.5;
+
+    const dv01 = fromBigInt(marketState.dv01, market.descriptor.underlyingDecimals)
+    const secondsToExpiry = +(termStart + termLength).toString() - Math.round(Date.now() / 1000)
+    const marketRate = +marketState.marketRate.toString() / 10**18
+    const avgRate = +marketState.avgRate.toString() / 10**18
+
+    const maxRisk = getDV01FromNotional(this.configService.get('trading.maxRisk'), secondsToExpiry)
+    const riskLevel = getDV01FromNotional(this.configService.get('trading.riskLevel'), secondsToExpiry)
+
+    const xFactor = this.configService.get('trading.xFactor') / 10**4
+    const yFactor = this.configService.get('trading.yFactor') / 10**4
+    const zFactor = this.configService.get('trading.zFactor') / 10**4
+
+    this.logger.log(`dv01: ${dv01}, riskLevel: ${riskLevel}, maxRisk: ${maxRisk}, avgRate: ${avgRate}`)
 
     // Rule 1
-    if(dv01 < riskLevel && marketRate > avgRate) {
-      pReceive = 0.6
-      pPay = 1 - pReceive
+    if(dv01 <= riskLevel && marketRate > (1 + xFactor) * avgRate) {
+      pReceive = 0.65
     }
     // Rule 2
-    if(dv01 < riskLevel && marketRate < avgRate) {
-      pReceive = 0.4
-      pPay = 1 - pReceive
+    if(dv01 <= riskLevel && marketRate < (1 - xFactor) * avgRate) {
+      pReceive = 0.35
     }
     // Rule 3.a
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
       (riskDirection === RiskDirectionType.RECEIVER) &&
-      (marketRate < avgRate)
+      (marketRate < (1 - yFactor) * avgRate)
     ) {
-      pReceive = 0.1
-      pPay = 1 - pReceive
+      pReceive = 0.2
     }
     // Rule 3.b
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
       (riskDirection === RiskDirectionType.RECEIVER) &&
-      (marketRate > avgRate)
+      (marketRate > (1 + zFactor) * avgRate)
     ) {
-      pReceive = 0.6
-      pPay = 1 - pReceive
+      pReceive = 0.65
     }
     // Rule 4.a
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
       (riskDirection === RiskDirectionType.PAYER) &&
-      (marketRate > avgRate)
+      (marketRate > (1 + yFactor) * avgRate)
     ) {
-      pReceive = 0.9
-      pPay = 1 - pReceive
+      pReceive = 0.8
     }
     // Rule 4.b
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
       (riskDirection === RiskDirectionType.PAYER) &&
-      (marketRate < avgRate)
+      (marketRate < (1 - zFactor) * avgRate)
     ) {
-      pReceive = 0.4
-      pPay = 1 - pReceive
+      pReceive = 0.35
     }
     // Rule 5
     if(dv01 >= maxRisk && riskDirection === RiskDirectionType.RECEIVER) {
       pReceive = 0
-      pPay = 1 - pReceive
     }
     // Rule 6
     if(dv01 >= maxRisk && riskDirection === RiskDirectionType.PAYER) {
       pReceive = 1
+    }
+
+    // First start of fresh market
+    if(marketRate === 0 && dv01 === 0 && avgRate === 0) {
+      pReceive = 0.5
+    }
+
+    if(pReceive > 0) {
       pPay = 1 - pReceive
     }
 
-    if(marketRate === 0n && dv01 === 0n && avgRate === 0n) {
-      pReceive = 0.5
-      pReceive = 1 - pReceive
-    }
+    this.logger.log(`P_Receive = ${pReceive}, P_Pay = ${pPay} `)
 
     if(pReceive === 0 && pPay === 0) {
       return null
@@ -226,7 +232,6 @@ export class AppService {
       : RiskDirectionType.PAYER
 
     this.logger.log(
-      `P_Receive = ${pReceive}, P_Pay = ${pPay} ` +
       `(rand = ${randomValue}), ` +
       `trade direction: ${direction} (${RiskDirectionAlias[direction]})`
     )
@@ -251,11 +256,13 @@ export class AppService {
     const riskDirection = floatTokenSum === 0n ? null
       : floatTokenSum < 0 ? RiskDirectionType.RECEIVER : RiskDirectionType.PAYER
 
+    const avgRate = this.getAverageRate()
+
     const marketState: CurrentMarketState  = {
       dv01,
       marketRate: tradeQuote.receiverQuote.tradeInfo.marketRateBefore,
       riskDirection,
-      avgRate: this.getAverageRate()
+      avgRate
     }
     return marketState
   }
@@ -265,9 +272,14 @@ export class AppService {
     const { id: futureId } = future;
 
     const maxTradeSize = this.configService.get('trading.maxTradeSize')
-    const randomValue = generateRandom(maxTradeSize, maxTradeSize * 10, maxTradeSize);
-    const notionalInteger = randomValue / 10
-    const notional = toBigInt(notionalInteger, underlyingDecimals);
+    const maxMarginInUse = toBigInt(this.configService.get('trading.maxMarginInUse'), underlyingDecimals)
+    const tradeAmountStep = Math.round(maxTradeSize / 10)
+    const randomValue = generateRandom(
+      tradeAmountStep,
+      maxTradeSize,
+      tradeAmountStep,
+    );
+    const notional = toBigInt(randomValue, underlyingDecimals);
 
     const tradeQuote = await this.web3Service.quoteTrade(
       market.descriptor.id,
@@ -285,10 +297,16 @@ export class AppService {
       `avg rate: ${marketState.avgRate}, `
     )
 
-    const tradeDirection = this.getTradeDirection(market, marketState)
+    const tradeDirection = this.getTradeDirection(market, future, marketState)
 
     if(tradeDirection === null) {
       this.logger.warn(`Trade direction is null, skip trading`)
+      return false
+    }
+
+    const currentMargin = marginTotal(portfolio.marginState.margin)
+    if(currentMargin > maxMarginInUse) {
+      this.logger.warn(`Current margin: ${currentMargin}, maxMarginInUse: ${maxMarginInUse}, skip this trading attempt`)
       return false
     }
 
@@ -319,6 +337,6 @@ export class AppService {
     )
     const txReceipt = await this.web3Service.executeTrade(tradeParams);
     this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`)
-    this.tradeHistory.set(txReceipt.hash, tradeParams)
+    this.tradeHistory.set((Math.random() + 1).toString(36).substring(7), tradeParams)
   }
 }

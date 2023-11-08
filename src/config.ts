@@ -1,7 +1,7 @@
 export default () => ({
   privateKey: process.env.PRIVATE_KEY || '',
   rpcUrl: process.env.RPC_URL || 'https://arbitrum-goerli.public.blastapi.io',
-  oracleUrl: process.env.ORACLE_URL || 'https://roaracle-test.fly.dev',
+  oracleUrl: process.env.ORACLE_URL || 'https://testnet.roaracle.app',
   oracleServiceApiKey: process.env.ORACLE_SERVICE_API_KEY || '',
   routerContractAddress: process.env.ROUTER_CONTRACT_ADDRESS || '',
   viewContractAddress: process.env.VIEW_CONTRACT_ADDRESS || '',
@@ -17,12 +17,16 @@ export default () => ({
     .map(item => item.trim().toLowerCase()),
   trading: {
     // Average interval between trade attempts [seconds]
-    avgInterval: parseInt(process.env.TRADE_AVERAGE_INTERVAL || '60'),
-    maxRisk: parseInt(process.env.TRADE_MAX_RISK || '1'),
+    avgInterval: parseInt(process.env.TRADE_AVERAGE_INTERVAL || '600'),
+    maxRisk: parseInt(process.env.TRADE_MAX_RISK || '10000'),
     // Max notional value [USDT]
-    maxTradeSize: parseInt(process.env.TRADE_MAX_SIZE || '100'),
+    maxTradeSize: parseInt(process.env.TRADE_MAX_SIZE || '1000'),
+    maxMarginInUse: parseInt(process.env.TRADE_MAX_MARGIN_IN_USE || '100'),
     // Max losses / day [USD]
     warningLosses: parseInt(process.env.TRADE_WARNING_LOSSES || '1000'),
-    riskLevel: parseInt(process.env.TRADE_RISK_LEVEL || '100')
+    riskLevel: parseInt(process.env.TRADE_RISK_LEVEL || '1000'),
+    xFactor: parseInt(process.env.TRADE_X_FACTOR || '5'),
+    yFactor: parseInt(process.env.TRADE_Y_FACTOR || '15'),
+    zFactor: parseInt(process.env.TRADE_Z_FACTOR || '10'),
   }
 });
