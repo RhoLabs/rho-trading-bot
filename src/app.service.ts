@@ -102,7 +102,7 @@ export class AppService {
         const currentPL = await this.web3Service.getProfitAndLoss()
         if(this.initialPL - currentPL > configWarningLosses) {
           this.logger.error(`ALERT: Current P&L $${currentPL} dropped below initial P&L $${this.initialPL} by $${configWarningLosses}, stop`)
-          return false
+          throw new Error(`Alert: P&L has dropped below limit`)
         }
       }
 
