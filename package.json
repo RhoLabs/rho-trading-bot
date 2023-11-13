@@ -33,6 +33,7 @@
     "evm-bn": "^1.1.2",
     "lru-cache": "^10.0.1",
     "moment": "^2.29.4",
+    "prom-client": "^15.0.0",
     "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {

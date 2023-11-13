@@ -22,7 +22,14 @@ npm i
 npm run start
 ```
 
+```shell
+aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 769492012699.dkr.ecr.eu-central-1.amazonaws.com
+
+docker buildx build -t 769492012699.dkr.ecr.eu-central-1.amazonaws.com/trading-bot:1.0.0-RC8  --platform linux/amd64 --push .
+```
+
 ## TODO
 - [x] Check balances on start
 - [ ] Check access rights on start
-- [ ] Circuit breaker
+- [x] Circuit breaker
+- [x] Basic Prometheus metrics

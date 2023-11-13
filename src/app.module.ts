@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { Web3Service } from './web3/web3.service';
 import { OracleService } from './oracle/oracle.service';
 import { MarketApiService } from './marketapi/marketapi.service';
+import { MetricsService } from './metrics/metrics.service';
 import configuration from './config';
 
 @Module({
@@ -18,6 +19,6 @@ import configuration from './config';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, Web3Service, OracleService, MarketApiService],
+  providers: [AppService, Web3Service, OracleService, MarketApiService, MetricsService],
 })
 export class AppModule {}

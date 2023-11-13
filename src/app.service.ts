@@ -14,6 +14,7 @@ import { fromBigInt, generateRandom, getDV01FromNotional, getMax, marginTotal, t
 import { LRUCache } from 'lru-cache';
 import { CronTime } from 'cron';
 import { MarketApiService } from './marketapi/marketapi.service';
+import { MetricsService } from "./metrics/metrics.service";
 
 interface CurrentMarketState {
   dv01: bigint;
@@ -36,7 +37,8 @@ export class AppService {
     private configService: ConfigService,
     private web3Service: Web3Service,
     private schedulerRegistry: SchedulerRegistry,
-    private marketApiService: MarketApiService
+    private marketApiService: MarketApiService,
+    private metricsService: MetricsService
   ) {
     this.web3Service.bootstrap()
       .then(() => this.marketApiService.bootstrap())
@@ -337,5 +339,6 @@ export class AppService {
     const txReceipt = await this.web3Service.executeTrade(tradeParams);
     this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`)
     this.tradeHistory.set((Math.random() + 1).toString(36).substring(7), tradeParams)
+    this.metricsService.increaseTradesCounter()
   }
 }
