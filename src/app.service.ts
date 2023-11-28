@@ -281,6 +281,7 @@ export class AppService {
       tradeAmountStep,
     );
     const notional = toBigInt(randomValue, underlyingDecimals);
+    // this.logger.log(`Calculate trade params: maxTradeSize: ${maxTradeSize}, notional: ${notional}`)
 
     const tradeQuote = await this.web3Service.quoteTrade(
       market.descriptor.id,
@@ -291,11 +292,11 @@ export class AppService {
     const marketState = await this.getCurrentMarketState(future, portfolio, tradeQuote)
 
     this.logger.log(
-      `Current market state ` +
-      `name: ${sourceName} ${instrumentName} ${underlyingName}, ` +
+      `Current market: ` +
+      `${sourceName} ${instrumentName} ${underlyingName}, ` +
       `dv01: ${marketState.dv01}, ` +
       `market rate: ${marketState.marketRate}, ` +
-      `avg rate: ${marketState.avgRate}, `
+      `avg rate: ${marketState.avgRate} `
     )
 
     const tradeDirection = this.getTradeDirection(market, future, marketState)
