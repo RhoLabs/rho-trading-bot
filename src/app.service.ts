@@ -274,7 +274,7 @@ export class AppService {
 
     const maxTradeSize = this.configService.get('trading.maxTradeSize')
     const maxMarginInUse = toBigInt(this.configService.get('trading.maxMarginInUse'), underlyingDecimals)
-    const tradeAmountStep = Math.round(maxTradeSize / 10)
+    const tradeAmountStep = maxTradeSize / 10
     const randomValue = generateRandom(
       tradeAmountStep,
       maxTradeSize,

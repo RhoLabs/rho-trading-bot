@@ -17,7 +17,8 @@ export const generateRandom = (start: number, end: number, step: number) => {
 }
 
 export const toBigInt = (value: number, decimalPlaces: bigint | number) => {
-  return BigInt(Math.round(value)) * BigInt(10n ** BigInt(decimalPlaces))
+  const dp = Number(decimalPlaces.toString())
+  return BigInt(value * 10**dp)
 }
 
 export const fromBigInt = (value: bigint, decimalPlaces: bigint | number) => {

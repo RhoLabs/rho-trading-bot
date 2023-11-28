@@ -17,16 +17,16 @@ export default () => ({
     .map(item => item.trim().toLowerCase()),
   trading: {
     // Average interval between trade attempts [seconds]
-    avgInterval: parseInt(process.env.TRADE_AVERAGE_INTERVAL || '600'),
-    maxRisk: parseInt(process.env.TRADE_MAX_RISK || '10000'),
+    avgInterval: Number(process.env.TRADE_AVERAGE_INTERVAL || '600'),
+    maxRisk: Number(process.env.TRADE_MAX_RISK || '10000'),
     // Max notional value [USDT]
-    maxTradeSize: parseInt(process.env.TRADE_MAX_SIZE || '1000'),
-    maxMarginInUse: parseInt(process.env.TRADE_MAX_MARGIN_IN_USE || '100'),
+    maxTradeSize: Number(process.env.TRADE_MAX_SIZE || '1000'),
+    maxMarginInUse: Number(process.env.TRADE_MAX_MARGIN_IN_USE || '100'),
     // Max losses / day [USD]
-    warningLosses: parseInt(process.env.TRADE_WARNING_LOSSES || '1000'),
-    riskLevel: parseInt(process.env.TRADE_RISK_LEVEL || '1000'),
-    xFactor: parseInt(process.env.TRADE_X_FACTOR || '5'),
-    yFactor: parseInt(process.env.TRADE_Y_FACTOR || '15'),
-    zFactor: parseInt(process.env.TRADE_Z_FACTOR || '10'),
+    warningLosses: Number(process.env.TRADE_WARNING_LOSSES || '1000'),
+    riskLevel: Number(process.env.TRADE_RISK_LEVEL || '1000'),
+    xFactor: Number(process.env.TRADE_X_FACTOR || '5'),
+    yFactor: Number(process.env.TRADE_Y_FACTOR || '15'),
+    zFactor: Number(process.env.TRADE_Z_FACTOR || '10'),
   }
 });
