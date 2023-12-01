@@ -247,8 +247,13 @@ export class Web3Service {
         descriptor: { underlyingName, underlyingDecimals },
         marginState: { margin: { profitAndLoss } }
       } = portfolioItem
-      const tokenName = underlyingName.toLowerCase().includes('eth') ? CoinGeckoTokenId.ethereum : CoinGeckoTokenId.tether
-      const tokenPriceUsd = await this.marketApiService.getTokenPrice(tokenName)
+      let tokenId = CoinGeckoTokenId.tether
+      if(['Tether USD', 'USDT'].includes(underlyingName)) {
+        tokenId = CoinGeckoTokenId.tether
+      } else if(['Wrapped Ether', 'WETH'].includes(underlyingName)) {
+        tokenId = CoinGeckoTokenId.ethereum
+      }
+      const tokenPriceUsd = await this.marketApiService.getTokenPrice(tokenId)
       const itemPL = profitAndLossTotal(profitAndLoss)
       totalProfitAndLoss += +fromBigInt(itemPL, underlyingDecimals) * tokenPriceUsd
     }
