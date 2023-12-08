@@ -48,10 +48,7 @@ export class AppService {
   }
 
   async bootstrap() {
-    this.logger.log(
-      `\nnetworkType: ${this.configService.get('networkType')}` +
-      `\nbot address: ${this.web3Service.rhoSDK.signerAddress}`,
-    );
+    this.logger.log(`Network type: ${this.configService.get('networkType')}`);
 
     this.initialPL = await this.web3Service.getProfitAndLoss()
     this.logger.log(`Initial P&L: ${this.initialPL} USD`)
@@ -139,7 +136,7 @@ export class AppService {
     const yFactor = this.configService.get('trading.yFactor') / 10**4
     const zFactor = this.configService.get('trading.zFactor') / 10**4
 
-    this.logger.log(`dv01: ${dv01}, riskLevel: ${riskLevel}, maxRisk: ${maxRisk}, avgRate: ${avgRate}`)
+    this.logger.log(`Current market state: \ndv01: ${dv01}, riskLevel: ${riskLevel}, maxRisk: ${maxRisk}, avgRate: ${avgRate}`)
 
     // Rule 1
     if(dv01 <= riskLevel && marketRate > (1 + xFactor) * avgRate) {
@@ -271,13 +268,13 @@ export class AppService {
 
     const marketState = await this.getCurrentMarketState(future, portfolio, tradeQuote)
 
-    this.logger.log(
-      `Current market: ` +
-      `${sourceName} ${instrumentName} ${underlyingName}, ` +
-      `dv01: ${marketState.dv01}, ` +
-      `market rate: ${marketState.marketRate}, ` +
-      `avg rate: ${marketState.avgRate} `
-    )
+    // this.logger.log(
+    //   `Current market: ` +
+    //   `${sourceName} ${instrumentName} ${underlyingName}, ` +
+    //   `dv01: ${marketState.dv01}, ` +
+    //   `market rate: ${marketState.marketRate}, ` +
+    //   `avg rate: ${marketState.avgRate} `
+    // )
 
     const tradeDirection = this.getTradeDirection(market, future, marketState)
 

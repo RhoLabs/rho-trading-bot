@@ -35,7 +35,7 @@ export class Web3Service {
   async bootstrap() {
     const balance = await this.getServiceBalance();
     this.logger.log(
-      `Service account balance: ${formatEther(balance)} ETH (${balance} wei)`,
+      `Bot address: ${this.rhoSDK.signerAddress}, balance: ${formatEther(balance)} ETH (${balance} wei)`,
     );
     if (balance === 0n) {
       this.logger.error(`Service account balance is zero, exit.`);
@@ -67,19 +67,19 @@ export class Web3Service {
           spenderAddress,
         );
         this.logger.log(
-          `Underlying balance: ${formatUnits(accountBalance, underlyingDecimals)} ${underlyingName} (${accountBalance} wei), allowance: ${formatUnits(allowance, underlyingDecimals)} ${underlyingName} (${allowance} wei), token address: ${underlying}`,
+          `Underlying balance: ${formatUnits(accountBalance, underlyingDecimals)} ${underlyingName} (${accountBalance} wei), allowance: ${formatUnits(allowance, underlyingDecimals)} ${underlyingName} (${allowance} wei), underlying token address: ${underlying}`,
         );
 
         if (accountBalance === 0n) {
           this.logger.error(
-            `Service account balance is zero for token ${underlyingName} (${underlying}), exit`,
+            `Balance = 0 for underlying ${underlyingName} (${underlying}), exit`,
           );
           process.exit(1);
         }
 
         if (accountBalance !== allowance) {
           this.logger.log(
-            `Updating ${underlyingName} ${underlying} allowance...`,
+            `Updating allowance ${underlyingName} (${underlying})...`,
           );
           const receipt = await this.rhoSDK.setAllowance(
             market.descriptor.underlying,
@@ -87,16 +87,16 @@ export class Web3Service {
             accountBalance,
           );
           this.logger.log(
-            `Updated allowance ${accountBalance} ${underlyingName} ${underlying} for address ${this.rhoSDK.signerAddress}, txnHash: ${receipt.hash}`,
+            `Updated allowance = ${accountBalance}, ${underlyingName} (${underlying}), txnHash: ${receipt.hash}`,
           );
         } else {
           this.logger.log(
-            `Allowance ${underlyingName}: no need to update`,
+            `Allowance ${underlyingName} (${underlying}): no need to update`,
           );
         }
       } catch (e) {
         this.logger.error(`Cannot set allowance: ${(e as Error).message}, exit`);
-        throw new Error('Cannot set allowance')
+        process.exit(1)
       }
     }
   }
@@ -121,7 +121,7 @@ export class Web3Service {
       const itemPL = profitAndLossTotal(profitAndLoss)
       totalProfitAndLoss += +fromBigInt(itemPL, underlyingDecimals) * tokenPriceUsd
     }
-    return totalProfitAndLoss
+    return Math.round(totalProfitAndLoss)
   }
 
   async getServiceBalance() {
@@ -130,6 +130,7 @@ export class Web3Service {
 
   async getAvgTradeRate() {
     const trades = await this.subgraphAPI.getTrades({
+      futureIds: [...this.configService.get('futureIds')],
       limit: 10
     })
     const tradeRateSum = trades.reduce((acc, trade) => acc + trade.tradeRate, 0n)
