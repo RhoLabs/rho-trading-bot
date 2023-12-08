@@ -1,64 +1,35 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FutureInfo, MarketInfo, MarketOraclePackages, MarketPortfolio, RiskDirectionType, TradeQuote } from "../types";
 import {OracleService} from "../oracle/oracle.service";
-import { ethers, JsonRpcProvider, Contract, Wallet, Provider, TransactionReceipt, formatEther, formatUnits } from "ethers";
-import { ERC20ABI, QuoterABI, RouterABI, ViewDataProviderABI } from "./abi";
+import { formatEther, formatUnits } from "ethers";
 import { CoinGeckoTokenId, MarketApiService } from "../marketapi/marketapi.service";
 import { fromBigInt, profitAndLossTotal } from "../utils";
-
-export interface ExecuteTradeParams {
-  marketId: string
-  futureId: string
-  direction: RiskDirectionType
-  notional: bigint
-  futureRateLimit: bigint
-  depositAmount: bigint
-  deadline: number
-  settleMaturedPositions?: boolean
-}
+import RhoSDK, { MarketInfo, SubgraphAPI } from "@rholabs/rho-sdk";
 
 @Injectable()
 export class Web3Service {
   private readonly logger = new Logger(Web3Service.name);
-  private provider: Provider;
-  private signer: Wallet;
-  private routerContract: Contract;
-  private viewContract: Contract;
-  private quoterContract: Contract;
+  public rhoSDK: RhoSDK
+  public subgraphAPI: SubgraphAPI
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly oracleService: OracleService,
     private readonly marketApiService: MarketApiService
   ) {
     const privateKey = configService.get('privateKey');
     if (!privateKey) {
-      this.logger.error(`No private key provided, set [PRIVATE_KEY].`);
+      this.logger.error(`No private key found, set [PRIVATE_KEY]. Exit.`);
+      process.exit(1)
     }
 
-    this.provider = new JsonRpcProvider(configService.get('rpcUrl'))
-    this.signer = new ethers.Wallet(privateKey, this.provider)
+    this.rhoSDK = new RhoSDK({
+      privateKey: configService.get('privateKey'),
+      network: configService.get('networkType')
+    })
 
-    this.viewContract = new ethers.Contract(
-      configService.get('viewContractAddress'),
-      ViewDataProviderABI,
-      this.provider
-    )
+    this.subgraphAPI = new SubgraphAPI({ apiUrl: configService.get('subgraphApiUrl') })
 
-    this.routerContract = new ethers.Contract(
-      configService.get('routerContractAddress'),
-      RouterABI,
-      this.signer
-    )
-
-    this.quoterContract = new ethers.Contract(
-      configService.get('quoterContractAddress'),
-      QuoterABI,
-      this.provider
-    )
-
-    this.logger.log(`Bot account address: ${this.signer.address}`);
+    this.logger.log(`Bot account address: ${this.rhoSDK.signerAddress}`);
   }
 
   async bootstrap() {
@@ -73,7 +44,7 @@ export class Web3Service {
 
     let markets: MarketInfo[] = [];
     try {
-      markets = await this.activeMarketsInfo();
+      markets = await this.rhoSDK.getActiveMarkets();
       markets = markets.filter(market => this.configService.get('marketIds').includes(market.descriptor.id))
     } catch (e) {
       this.logger.error(
@@ -85,14 +56,14 @@ export class Web3Service {
       try {
         const market = markets[i];
         const { underlying, underlyingName, underlyingDecimals } = market.descriptor;
-        const spenderAddress = this.configService.get('routerContractAddress');
-        const accountBalance = await this.getBalanceOf(
+        const spenderAddress = this.rhoSDK.config.routerAddress;
+        const accountBalance = await this.rhoSDK.getBalanceOf(
           underlying,
-          this.signer.address,
+          this.rhoSDK.signerAddress,
         );
-        const allowance = await this.getAllowance(
+        const allowance = await this.rhoSDK.getAllowance(
           underlying,
-          this.signer.address,
+          this.rhoSDK.signerAddress,
           spenderAddress,
         );
         this.logger.log(
@@ -110,13 +81,13 @@ export class Web3Service {
           this.logger.log(
             `Updating ${underlyingName} ${underlying} allowance...`,
           );
-          const receipt = await this.setAllowance(
+          const receipt = await this.rhoSDK.setAllowance(
             market.descriptor.underlying,
             spenderAddress,
             accountBalance,
           );
           this.logger.log(
-            `Updated allowance ${accountBalance} ${underlyingName} ${underlying} for address ${this.signer.address}, txnHash: ${receipt.hash}`,
+            `Updated allowance ${accountBalance} ${underlyingName} ${underlying} for address ${this.rhoSDK.signerAddress}, txnHash: ${receipt.hash}`,
           );
         } else {
           this.logger.log(
@@ -124,123 +95,16 @@ export class Web3Service {
           );
         }
       } catch (e) {
-        this.logger.error(`Cannot set allowance: ${(e as Error).message}`);
+        this.logger.error(`Cannot set allowance: ${(e as Error).message}, exit`);
+        throw new Error('Cannot set allowance')
       }
     }
   }
 
-  async getBalanceOf(contractAddress: string, userAddress: string): Promise<bigint> {
-    const erc20Contract = new ethers.Contract(
-      contractAddress,
-      ERC20ABI,
-      this.provider
-    )
-    return await erc20Contract.balanceOf(userAddress)
-  }
-
-  async getAllowance(
-    contractAddress: string,
-    userAddress: string,
-    spenderAddress: string,
-  ): Promise<bigint> {
-    const erc20Contract = new ethers.Contract(
-      contractAddress,
-      ERC20ABI,
-      this.provider
-    )
-    return await erc20Contract.allowance(userAddress, spenderAddress)
-  }
-
-  async setAllowance(
-    erc20ContractAddress: string,
-    spenderAddress: string,
-    amount: bigint,
-  ): Promise<TransactionReceipt> {
-    const erc20Contract = new ethers.Contract(
-      erc20ContractAddress,
-      ERC20ABI,
-      this.signer
-    )
-    const receipt = await erc20Contract.approve(spenderAddress, amount);
-    await receipt.wait();
-    return receipt
-  }
-
-  async getFuturesCloseToMaturity(
-    marketId: string,
-    maturityBufferSeconds: number,
-  ): Promise<FutureInfo[]> {
-    return await this.viewContract
-      .futuresInfoCloseToMaturityWithoutIndex(marketId, maturityBufferSeconds)
-  }
-
-  async getActiveMarketIds(
-    offset = 0,
-    limit = 100
-  ): Promise<string[]> {
-    return await this.viewContract.allActiveMarketsIds(offset, limit)
-  }
-
-  async getPortfolioMarketIds(
-    userAddress: string,
-    offset = 0,
-    limit = 100
-  ): Promise<string[]> {
-    return await this.viewContract.portfolioMarketIds(userAddress, offset, limit)
-  }
-
-  async getMarketsOraclePackages() {
-    const marketIds = await this.getActiveMarketIds()
-    const oraclePackages: MarketOraclePackages[] = await Promise.all(marketIds.map(async (marketId) => {
-      const oraclePackage = await this.oracleService.getOraclePackage(marketId)
-      return {
-        marketId,
-        packages: [oraclePackage]
-      }
-    }))
-    return oraclePackages
-  }
-
-  async getPortfolioOraclePackages(userAddress = this.signer.address) {
-    const marketIds = await this.getPortfolioMarketIds(userAddress)
-    const oraclePackages: MarketOraclePackages[] = await Promise.all(marketIds.map(async (marketId) => {
-      const oraclePackage = await this.oracleService.getOraclePackage(marketId)
-      return {
-        marketId,
-        packages: [oraclePackage]
-      }
-    }))
-    return oraclePackages
-  }
-
-  async activeMarketsInfo(
-    offset = 0,
-    limit = 100,
-    oraclePackages?: MarketOraclePackages[],
-  ): Promise<MarketInfo[]> {
-    const packages = oraclePackages || await this.getMarketsOraclePackages()
-    return await this.viewContract.activeMarketsInfo(offset, limit, packages)
-  }
-
-  async getPortfolio(
-    userAddress = this.signer.address,
-    offset = 0,
-    limit = 100
-  ): Promise<MarketPortfolio[]> {
-    const oraclePackages = await this.getPortfolioOraclePackages(userAddress)
-    return await this.viewContract.portfolio(userAddress, offset, limit, oraclePackages)
-  }
-
-  async getMarketPortfolio(
-    marketId: string,
-    userAddress = this.signer.address
-  ): Promise<MarketPortfolio> {
-    const oraclePackage = await this.oracleService.getOraclePackage(marketId)
-    return await this.viewContract.marketPortfolio(marketId, userAddress, [oraclePackage])
-  }
-
   async getProfitAndLoss() {
-    const portfolio = await this.getPortfolio()
+    const portfolio = await this.rhoSDK.getPortfolio({
+      userAddress: this.rhoSDK.signerAddress
+    })
     let totalProfitAndLoss = 0
     for(let portfolioItem of portfolio) {
       const {
@@ -260,58 +124,15 @@ export class Web3Service {
     return totalProfitAndLoss
   }
 
-  async quoteTrade(
-    marketId: string,
-    futureId: string,
-    notional: bigint,
-    userAddress = this.signer.address
-  ): Promise<TradeQuote> {
-    const oraclePackage = await this.oracleService.getOraclePackage(marketId)
-    return await this.quoterContract.quoteTrade(futureId, notional, userAddress, [oraclePackage])
-  }
-
-  async executeTrade(params: ExecuteTradeParams): Promise<TransactionReceipt> {
-    const {
-      marketId,
-      futureId,
-      direction,
-      notional,
-      futureRateLimit,
-      depositAmount,
-      deadline,
-      settleMaturedPositions = true
-    } = params
-
-    const oraclePackage = await this.oracleService.getOraclePackage(marketId)
-    const executeTradeArguments = [
-      futureId,
-      direction,
-      notional,
-      futureRateLimit,
-      depositAmount,
-      deadline,
-      settleMaturedPositions,
-      [oraclePackage]
-    ]
-
-    const estimateGas  = await this.routerContract.executeTrade.estimateGas(...executeTradeArguments)
-
-    const receipt = await this.routerContract.executeTrade(...executeTradeArguments,
-      {
-        gasLimit: BigInt(Math.round(Number(estimateGas) * 1.2))
-      }
-    );
-    this.logger.log(`Trade tx sent, receipt txnHash: ${receipt.hash}. Waiting for confirmation...`)
-
-    await receipt.wait(this.configService.get('txConfirmations'));
-    return receipt
-  }
-
-  getAccountAddress() {
-    return this.signer.address
-  }
-
   async getServiceBalance() {
-    return await this.provider.getBalance(this.signer.address)
+    return await this.rhoSDK.getBalance(this.rhoSDK.signerAddress)
+  }
+
+  async getAvgTradeRate() {
+    const trades = await this.subgraphAPI.getTrades({
+      limit: 10
+    })
+    const tradeRateSum = trades.reduce((acc, trade) => acc + trade.tradeRate, 0n)
+    return tradeRateSum / BigInt(trades.length)
   }
 }

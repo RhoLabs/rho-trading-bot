@@ -1,4 +1,4 @@
-import { Margin, ProfitAndLoss } from "../types";
+import { Margin, ProfitAndLoss } from "@rholabs/rho-sdk";
 
 function getRandomArbitrary(min: number, max: number) {
   return Math.random() * (max - min) + min;

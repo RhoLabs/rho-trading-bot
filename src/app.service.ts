@@ -1,35 +1,36 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, SchedulerRegistry } from '@nestjs/schedule';
-import { ExecuteTradeParams, Web3Service } from './web3/web3.service';
+import { Web3Service } from './web3/web3.service';
 import { ConfigService } from '@nestjs/config';
-import {
-  FutureInfo,
-  MarketInfo,
-  MarketPortfolio,
-  RiskDirectionAlias,
-  RiskDirectionType,
-  TradeQuote,
-} from './types';
+import { RiskDirectionAlias } from './constants';
 import { fromBigInt, generateRandom, getDV01FromNotional, getMax, marginTotal, toBigInt } from "./utils";
 import { LRUCache } from 'lru-cache';
 import { CronTime } from 'cron';
 import { MarketApiService } from './marketapi/marketapi.service';
 import { MetricsService } from "./metrics/metrics.service";
+import { FutureInfo, MarketInfo, MarketPortfolio, RiskDirection, TradeQuote } from "@rholabs/rho-sdk";
 
 interface CurrentMarketState {
   dv01: bigint;
   marketRate: bigint;
-  riskDirection: RiskDirectionType | null;
+  riskDirection: RiskDirection | null;
   avgRate: bigint;
+}
+
+interface ExecuteTradeParams {
+  marketId: string
+  futureId: string,
+  riskDirection: RiskDirection,
+  notional: bigint,
+  futureRateLimit: bigint,
+  depositAmount: bigint,
+  deadline?: number,
+  settleMaturedPositions?: boolean
 }
 
 @Injectable()
 export class AppService {
   private readonly logger = new Logger(AppService.name);
-  private readonly tradeHistory = new LRUCache<string, ExecuteTradeParams>({
-    max: 1000,
-    ttl: 30 * 24 * 60 * 60 * 1000
-  })
   private readonly startTimestamp = Date.now()
   private initialPL = 0
 
@@ -47,26 +48,9 @@ export class AppService {
   }
 
   async bootstrap() {
-    const privateKey = this.configService.get('privateKey');
-    const hideString = (str: string) =>
-      str
-        .split('')
-        .map((_) => '*')
-        .join('');
-
     this.logger.log(
-      `\nrpcUrl: ${this.configService.get('rpcUrl')}` +
-        `\noracleUrl: ${this.configService.get('oracleUrl')}` +
-        `\nrouterContractAddress: ${this.configService.get(
-          'routerContractAddress',
-        )}` +
-        `\nviewContractAddress: ${this.configService.get(
-          'viewContractAddress',
-        )}` +
-        `\nprivateKey: ${privateKey ? hideString(privateKey) : 'MISSING'}` +
-        `\nserviceAddress: ${
-          privateKey ? this.web3Service.getAccountAddress() : 'MISSING'
-        }`,
+      `\nnetworkType: ${this.configService.get('networkType')}` +
+      `\nbot address: ${this.web3Service.rhoSDK.signerAddress}`,
     );
 
     this.initialPL = await this.web3Service.getProfitAndLoss()
@@ -74,16 +58,6 @@ export class AppService {
 
     const job = this.schedulerRegistry.getCronJob('update');
     job.start()
-  }
-
-  getAverageRate() {
-    let sumRate = 0n
-    let counter = 0n
-    this.tradeHistory.forEach((item) => {
-      counter += 1n
-      sumRate += item.futureRateLimit
-    })
-    return counter > 0 ? sumRate / counter : 0n
   }
 
   @Cron('*/10 * * * * *', {
@@ -107,7 +81,7 @@ export class AppService {
         }
       }
 
-      let markets = (await this.web3Service.activeMarketsInfo())
+      let markets = await this.web3Service.rhoSDK.getActiveMarkets()
 
       if(configMarketIds.length > 0) {
         markets = markets.filter((item) => configMarketIds.includes(item.descriptor.id.toLowerCase()));
@@ -120,7 +94,11 @@ export class AppService {
           futures = futures.filter((future) => configFutureIds.includes(future.id.toLowerCase()));
         }
 
-        const portfolio = await this.web3Service.getMarketPortfolio(market.descriptor.id)
+        const portfolio = await this.web3Service.rhoSDK.getMarketPortfolio({
+          marketId: market.descriptor.id,
+          userAddress: this.web3Service.rhoSDK.signerAddress
+        })
+
         for (let future of futures) {
           try {
             await this.initiateTrade(market, future, portfolio);
@@ -143,7 +121,7 @@ export class AppService {
     job.start()
   }
 
-  getTradeDirection(market: MarketInfo, future: FutureInfo, marketState: CurrentMarketState): RiskDirectionType | null {
+  getTradeDirection(market: MarketInfo, future: FutureInfo, marketState: CurrentMarketState): RiskDirection | null {
     const { termStart, termLength } = future
     const { riskDirection} = marketState
 
@@ -174,7 +152,7 @@ export class AppService {
     // Rule 3.a
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
-      (riskDirection === RiskDirectionType.RECEIVER) &&
+      (riskDirection === RiskDirection.RECEIVER) &&
       (marketRate < (1 - yFactor) * avgRate)
     ) {
       pReceive = 0.2
@@ -182,7 +160,7 @@ export class AppService {
     // Rule 3.b
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
-      (riskDirection === RiskDirectionType.RECEIVER) &&
+      (riskDirection === RiskDirection.RECEIVER) &&
       (marketRate > (1 + zFactor) * avgRate)
     ) {
       pReceive = 0.65
@@ -190,7 +168,7 @@ export class AppService {
     // Rule 4.a
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
-      (riskDirection === RiskDirectionType.PAYER) &&
+      (riskDirection === RiskDirection.PAYER) &&
       (marketRate > (1 + yFactor) * avgRate)
     ) {
       pReceive = 0.8
@@ -198,17 +176,17 @@ export class AppService {
     // Rule 4.b
     if(
       (riskLevel < dv01 && dv01 < maxRisk) &&
-      (riskDirection === RiskDirectionType.PAYER) &&
+      (riskDirection === RiskDirection.PAYER) &&
       (marketRate < (1 - zFactor) * avgRate)
     ) {
       pReceive = 0.35
     }
     // Rule 5
-    if(dv01 >= maxRisk && riskDirection === RiskDirectionType.RECEIVER) {
+    if(dv01 >= maxRisk && riskDirection === RiskDirection.RECEIVER) {
       pReceive = 0
     }
     // Rule 6
-    if(dv01 >= maxRisk && riskDirection === RiskDirectionType.PAYER) {
+    if(dv01 >= maxRisk && riskDirection === RiskDirection.PAYER) {
       pReceive = 1
     }
 
@@ -229,8 +207,8 @@ export class AppService {
 
     const randomValue = Math.random()
     const direction = randomValue <= pReceive
-      ? RiskDirectionType.RECEIVER
-      : RiskDirectionType.PAYER
+      ? RiskDirection.RECEIVER
+      : RiskDirection.PAYER
 
     this.logger.log(
       `(rand = ${randomValue}), ` +
@@ -247,7 +225,8 @@ export class AppService {
   ) {
     const { id: futureId } = future;
 
-    const futureOpenPositions = portfolio.futureOpenPositions.filter((pos) => pos.futureId === futureId)
+    const futureOpenPositions = portfolio.futureOpenPositions
+      .filter((pos) => pos.futureId === futureId)
     const dv01 = futureOpenPositions.reduce((acc, item) => acc + item.dv01, 0n)
     let floatTokenSum = 0n
     if(portfolio) {
@@ -255,9 +234,9 @@ export class AppService {
         (acc, nextItem) => acc + nextItem.tokensPair.floatTokenAmount, 0n)
     }
     const riskDirection = floatTokenSum === 0n ? null
-      : floatTokenSum < 0 ? RiskDirectionType.RECEIVER : RiskDirectionType.PAYER
+      : floatTokenSum < 0 ? RiskDirection.RECEIVER : RiskDirection.PAYER
 
-    const avgRate = this.getAverageRate()
+    const avgRate = await this.web3Service.getAvgTradeRate()
 
     const marketState: CurrentMarketState  = {
       dv01,
@@ -283,11 +262,12 @@ export class AppService {
     const notional = toBigInt(randomValue, underlyingDecimals);
     // this.logger.log(`Calculate trade params: maxTradeSize: ${maxTradeSize}, notional: ${notional}`)
 
-    const tradeQuote = await this.web3Service.quoteTrade(
-      market.descriptor.id,
-      future.id,
+    const tradeQuote = await this.web3Service.rhoSDK.getTradeQuote({
+      marketId: market.descriptor.id,
+      futureId: future.id,
       notional,
-    );
+      participant: this.web3Service.rhoSDK.signerAddress
+    });
 
     const marketState = await this.getCurrentMarketState(future, portfolio, tradeQuote)
 
@@ -312,16 +292,16 @@ export class AppService {
       return false
     }
 
-    const selectedQuote = tradeDirection === RiskDirectionType.RECEIVER ? tradeQuote.receiverQuote : tradeQuote.payerQuote
+    const selectedQuote = tradeDirection === RiskDirection.RECEIVER ? tradeQuote.receiverQuote : tradeQuote.payerQuote
     const totalMargin = marginTotal(selectedQuote.newMargin)
     const { newMarginThreshold } = selectedQuote
     const depositAmount = getMax(newMarginThreshold - totalMargin, 0n)
-    const futureRateLimit = selectedQuote.tradeInfo.tradeRate + BigInt(0.1 * 10**16)*BigInt(tradeDirection === RiskDirectionType.RECEIVER ? -1 : 1)
+    const futureRateLimit = selectedQuote.tradeInfo.tradeRate + BigInt(0.1 * 10**16)*BigInt(tradeDirection === RiskDirection.RECEIVER ? -1 : 1)
 
-    const tradeParams: ExecuteTradeParams = {
+    const tradeParams = {
       marketId,
       futureId,
-      direction: tradeDirection,
+      riskDirection: tradeDirection,
       notional,
       futureRateLimit,
       depositAmount, // toBigInt(1, underlyingDecimals),
@@ -331,15 +311,14 @@ export class AppService {
     this.logger.log(
       `Trade attempt ` +
       `futureId: ${tradeParams.futureId}, ` +
-      `direction: ${tradeParams.direction}, ` +
+      `riskDirection: ${tradeParams.riskDirection}, ` +
       `notional: ${tradeParams.notional}, ` +
       `futureRateLimit: ${tradeParams.futureRateLimit}, ` +
       `depositAmount: ${tradeParams.depositAmount}, ` +
       `deadline: ${tradeParams.deadline}`
     )
-    const txReceipt = await this.web3Service.executeTrade(tradeParams);
+    const txReceipt = await this.web3Service.rhoSDK.executeTrade(tradeParams);
     this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`)
-    this.tradeHistory.set((Math.random() + 1).toString(36).substring(7), tradeParams)
     this.metricsService.increaseTradesCounter()
   }
 }
