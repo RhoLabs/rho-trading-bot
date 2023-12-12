@@ -16,6 +16,8 @@ export default () => ({
     .split(',')
     .filter(_ => _)
     .map(item => item.trim().toLowerCase()),
+  marginWithdrawThreshold: Number(process.env.MARGIN_WITHDRAW_THRESHOLD || '0'),
+  marginWithdrawAmount: Number(process.env.MARGIN_WITHDRAW_AMOUNT || '0'),
   trading: {
     // Average interval between trade attempts [seconds]
     avgInterval: Number(process.env.TRADE_AVERAGE_INTERVAL || '600'),

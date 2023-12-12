@@ -1,10 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, SchedulerRegistry } from '@nestjs/schedule';
+import { Cron, SchedulerRegistry } from "@nestjs/schedule";
 import { Web3Service } from './web3/web3.service';
 import { ConfigService } from '@nestjs/config';
 import { RiskDirectionAlias } from './constants';
 import { fromBigInt, generateRandom, getDV01FromNotional, getMax, marginTotal, toBigInt } from "./utils";
-import { LRUCache } from 'lru-cache';
 import { CronTime } from 'cron';
 import { MarketApiService } from './marketapi/marketapi.service';
 import { MetricsService } from "./metrics/metrics.service";
@@ -15,17 +14,6 @@ interface CurrentMarketState {
   marketRate: bigint;
   riskDirection: RiskDirection | null;
   avgRate: bigint;
-}
-
-interface ExecuteTradeParams {
-  marketId: string
-  futureId: string,
-  riskDirection: RiskDirection,
-  notional: bigint,
-  futureRateLimit: bigint,
-  depositAmount: bigint,
-  deadline?: number,
-  settleMaturedPositions?: boolean
 }
 
 @Injectable()
@@ -53,13 +41,15 @@ export class AppService {
     this.initialPL = await this.web3Service.getProfitAndLoss()
     this.logger.log(`Initial P&L: ${this.initialPL} USD`)
 
-    const job = this.schedulerRegistry.getCronJob('update');
-    job.start()
+    const tradeJob = this.schedulerRegistry.getCronJob('update');
+    const marginJob = this.schedulerRegistry.getCronJob('check_margin');
+    tradeJob.start()
+    marginJob.start()
   }
 
   @Cron('*/10 * * * * *', {
     name: 'update',
-    disabled: true,
+    disabled: true, // Update is launched from "bootstrap"
   })
   async runUpdate() {
     const configMarketIds = this.configService.get('marketIds') as string[];
@@ -267,15 +257,6 @@ export class AppService {
     });
 
     const marketState = await this.getCurrentMarketState(future, portfolio, tradeQuote)
-
-    // this.logger.log(
-    //   `Current market: ` +
-    //   `${sourceName} ${instrumentName} ${underlyingName}, ` +
-    //   `dv01: ${marketState.dv01}, ` +
-    //   `market rate: ${marketState.marketRate}, ` +
-    //   `avg rate: ${marketState.avgRate} `
-    // )
-
     const tradeDirection = this.getTradeDirection(market, future, marketState)
 
     if(tradeDirection === null) {
@@ -317,5 +298,46 @@ export class AppService {
     const txReceipt = await this.web3Service.rhoSDK.executeTrade(tradeParams);
     this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`)
     this.metricsService.increaseTradesCounter()
+  }
+
+  @Cron('*/60 * * * * *', {
+    name: 'check_margin',
+    disabled: true,
+  })
+  async checkBotMargin() {
+    if(!this.configService.get('marginWithdrawThreshold')
+      || !this.configService.get('marginWithdrawAmount')
+    ) {
+      return false
+    }
+
+    const marketIds = this.configService.get('marketIds')
+    const markets = await this.web3Service.rhoSDK.getActiveMarkets()
+
+    for(const marketId of marketIds) {
+      const market = markets.find(market => market.descriptor.id === marketId)
+      if(market) {
+        const { underlyingDecimals } = market.descriptor
+        const marginWithdrawThreshold = toBigInt(this.configService.get('marginWithdrawThreshold'), underlyingDecimals)
+        const marginWithdrawAmount = toBigInt(this.configService.get('marginWithdrawAmount'), underlyingDecimals)
+
+        const availableToWithdraw = await this.web3Service.rhoSDK.getWithdrawableMargin({
+          marketId,
+          userAddress: this.web3Service.rhoSDK.signerAddress
+        }) as bigint
+        this.logger.log(`[withdraw margin] Available to withdraw: ${availableToWithdraw}, marginWithdrawThreshold: ${marginWithdrawThreshold}, marginWithdrawAmount: ${marginWithdrawAmount}`)
+
+        if(availableToWithdraw > marginWithdrawThreshold && availableToWithdraw > marginWithdrawAmount) {
+          this.logger.log(`[withdraw margin] Start withdraw margin amount: ${marginWithdrawAmount}`)
+          const tx = await this.web3Service.rhoSDK.withdraw({
+            marketId,
+            amount: marginWithdrawAmount
+          })
+          this.logger.log(`Withdraw margin transaction hash: ${tx.hash}`)
+        } else {
+          // this.logger.log('Skip withdraw margin')
+        }
+      }
+    }
   }
 }
