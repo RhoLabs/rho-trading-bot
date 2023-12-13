@@ -126,7 +126,7 @@ export class AppService {
     const yFactor = this.configService.get('trading.yFactor') / 10**4
     const zFactor = this.configService.get('trading.zFactor') / 10**4
 
-    this.logger.log(`Current market state: \ndv01: ${dv01}, riskLevel: ${riskLevel}, maxRisk: ${maxRisk}, avgRate: ${avgRate}`)
+    this.logger.log(`Current market state: \ndv01: ${dv01}, riskLevel: ${riskLevel}, maxRisk: ${maxRisk}, avgRate: ${avgRate}, marketRate: ${marketRate}`)
 
     // Rule 1
     if(dv01 <= riskLevel && marketRate > (1 + xFactor) * avgRate) {
@@ -325,9 +325,9 @@ export class AppService {
           marketId,
           userAddress: this.web3Service.rhoSDK.signerAddress
         }) as bigint
-        this.logger.log(`[withdraw margin] Available to withdraw: ${availableToWithdraw}, marginWithdrawThreshold: ${marginWithdrawThreshold}, marginWithdrawAmount: ${marginWithdrawAmount}`)
 
         if(availableToWithdraw > marginWithdrawThreshold && availableToWithdraw > marginWithdrawAmount) {
+          this.logger.log(`[withdraw margin] Available to withdraw: ${availableToWithdraw}, marginWithdrawThreshold: ${marginWithdrawThreshold}, marginWithdrawAmount: ${marginWithdrawAmount}`)
           this.logger.log(`[withdraw margin] Start withdraw margin amount: ${marginWithdrawAmount}`)
           const tx = await this.web3Service.rhoSDK.withdraw({
             marketId,
