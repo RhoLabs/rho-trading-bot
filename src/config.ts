@@ -2,7 +2,7 @@ export default () => ({
   privateKey: process.env.PRIVATE_KEY || '',
   networkType: process.env.NETWORK_TYPE || 'testnet',
   subgraphApiUrl: process.env.SUBGRAPH_API_URL || '',
-  // rpcUrl: process.env.RPC_URL || 'https://arbitrum-goerli.public.blastapi.io',
+  rpcUrl: process.env.RPC_URL || '',
   // oracleUrl: process.env.ORACLE_URL || 'https://testnet.roaracle.app',
   // routerContractAddress: process.env.ROUTER_CONTRACT_ADDRESS || '',
   // viewContractAddress: process.env.VIEW_CONTRACT_ADDRESS || '',

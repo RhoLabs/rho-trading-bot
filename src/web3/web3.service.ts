@@ -24,7 +24,8 @@ export class Web3Service {
 
     this.rhoSDK = new RhoSDK({
       privateKey: configService.get('privateKey'),
-      network: configService.get('networkType')
+      network: configService.get('networkType'),
+      rpcUrl: configService.get('rpcUrl')
     })
 
     this.subgraphAPI = new SubgraphAPI({ apiUrl: configService.get('subgraphApiUrl') })
