@@ -237,7 +237,6 @@ export class AppService {
   async initiateTrade(market: MarketInfo, future: FutureInfo, portfolio: MarketPortfolio) {
     const { id: marketId, underlyingName, underlyingDecimals, sourceName, instrumentName } = market.descriptor;
     const { id: futureId } = future;
-
     const maxTradeSize = this.configService.get('trading.maxTradeSize')
     const maxMarginInUse = toBigInt(this.configService.get('trading.maxMarginInUse'), underlyingDecimals)
     const tradeAmountStep = maxTradeSize / 10

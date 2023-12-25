@@ -1,6 +1,6 @@
 {
   "name": "rho-trading-bot",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "",
   "author": "",
   "private": true,
@@ -27,7 +27,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/schedule": "^3.0.1",
     "@nestjs/swagger": "^7.1.2",
-    "@rholabs/rho-sdk": "0.2.5",
+    "@rholabs/rho-sdk": "0.2.8",
     "axios": "^1.4.0",
     "cache-manager": "^5.2.3",
     "ethers": "6.8.0",
