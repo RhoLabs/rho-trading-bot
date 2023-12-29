@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {OracleService} from "../oracle/oracle.service";
 import { formatEther, formatUnits } from "ethers";
 import { CoinGeckoTokenId, MarketApiService } from "../marketapi/marketapi.service";
 import { fromBigInt, profitAndLossTotal } from "../utils";
