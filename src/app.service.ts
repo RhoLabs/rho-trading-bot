@@ -78,7 +78,7 @@ export class AppService {
       if (Date.now() - this.startTimestamp > 24 * 60 * 60 * 1000) {
         const currentPL = await this.web3Service.getProfitAndLoss();
         if (this.initialPL - currentPL > configWarningLosses) {
-          throw new Error(
+          this.logger.error(
             `ALERT: P&L dropped below min level. Current P&L $${currentPL}, initial P&L $${this.initialPL}, max loss from config: $${configWarningLosses}. Skip attempt.`,
           );
         }
