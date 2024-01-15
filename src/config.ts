@@ -10,12 +10,12 @@ export default () => ({
   // txConfirmations: parseInt(process.env.TX_CONFIRMATIONS || '2'),
   marketIds: (process.env.MARKET_IDS || '')
     .split(',')
-    .filter(_ => _)
-    .map(item => item.trim().toLowerCase()),
+    .filter((_) => _)
+    .map((item) => item.trim().toLowerCase()),
   futureIds: (process.env.FUTURE_IDS || '')
     .split(',')
-    .filter(_ => _)
-    .map(item => item.trim().toLowerCase()),
+    .filter((_) => _)
+    .map((item) => item.trim().toLowerCase()),
   marginWithdrawThreshold: Number(process.env.MARGIN_WITHDRAW_THRESHOLD || '0'),
   marginWithdrawAmount: Number(process.env.MARGIN_WITHDRAW_AMOUNT || '0'),
   trading: {
@@ -31,5 +31,5 @@ export default () => ({
     xFactor: Number(process.env.TRADE_X_FACTOR || '5'),
     yFactor: Number(process.env.TRADE_Y_FACTOR || '15'),
     zFactor: Number(process.env.TRADE_Z_FACTOR || '10'),
-  }
+  },
 });
