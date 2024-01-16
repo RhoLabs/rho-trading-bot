@@ -294,6 +294,21 @@ export class AppService {
       `depositAmount: ${tradeParams.depositAmount}, ` +
       `deadline: ${tradeParams.deadline}`
     )
+
+    if (tradeParams.depositAmount > 0) {
+      this.logger.log(
+        `Increasing allowance for depositAmount ${depositAmount}`,
+      );
+      const approvalReceipt = await this.web3Service.rhoSDK.setAllowance(
+        market.descriptor.underlying,
+        this.web3Service.rhoSDK.config.routerAddress,
+        tradeParams.depositAmount,
+      );
+      this.logger.log(
+        `Approval was successful! txnHash: ${approvalReceipt.hash}`,
+      );
+    }
+
     const txReceipt = await this.web3Service.rhoSDK.executeTrade(tradeParams);
     this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`)
     this.metricsService.increaseTradesCounter()
