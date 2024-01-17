@@ -113,6 +113,9 @@ export class AppService {
             this.logger.error(
               `Error on trading future ${future.id}: ${(e as Error).message}`,
             );
+          } finally {
+            // timeout between trades in different futures
+            await new Promise(resolve => setTimeout(resolve, 2000))
           }
         }
       }

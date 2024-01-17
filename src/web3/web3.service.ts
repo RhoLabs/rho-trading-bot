@@ -158,6 +158,8 @@ export class Web3Service {
       (acc, trade) => acc + trade.tradeRate,
       0n,
     );
-    return tradeRateSum / BigInt(trades.length);
+    return trades.length > 0
+      ? tradeRateSum / BigInt(trades.length)
+      : 0n;
   }
 }
