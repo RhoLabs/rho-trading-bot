@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { MetricsService } from "./metrics/metrics.service";
+import { MetricsService } from './metrics/metrics.service';
 
 @Controller()
 export class AppController {

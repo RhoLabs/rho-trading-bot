@@ -19,6 +19,12 @@ import configuration from './config';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, Web3Service, OracleService, MarketApiService, MetricsService],
+  providers: [
+    AppService,
+    Web3Service,
+    OracleService,
+    MarketApiService,
+    MetricsService,
+  ],
 })
 export class AppModule {}
