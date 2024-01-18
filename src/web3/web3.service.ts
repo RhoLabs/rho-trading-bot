@@ -124,7 +124,7 @@ export class Web3Service {
       userAddress: this.rhoSDK.signerAddress,
     });
     let totalProfitAndLoss = 0;
-    for (let portfolioItem of portfolio) {
+    for (const portfolioItem of portfolio) {
       const {
         descriptor: { underlyingName, underlyingDecimals },
         marginState: {
@@ -158,6 +158,6 @@ export class Web3Service {
       (acc, trade) => acc + trade.tradeRate,
       0n,
     );
-    return tradeRateSum / BigInt(trades.length);
+    return trades.length > 0 ? tradeRateSum / BigInt(trades.length) : 0n;
   }
 }

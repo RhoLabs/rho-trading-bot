@@ -92,7 +92,7 @@ export class AppService {
         );
       }
 
-      for (let market of markets) {
+      for (const market of markets) {
         let futures = market.futures;
 
         if (configFutureIds.length > 0) {
@@ -106,13 +106,16 @@ export class AppService {
           userAddress: this.web3Service.rhoSDK.signerAddress,
         });
 
-        for (let future of futures) {
+        for (const future of futures) {
           try {
             await this.initiateTrade(market, future, portfolio);
           } catch (e) {
             this.logger.error(
               `Error on trading future ${future.id}: ${(e as Error).message}`,
             );
+          } finally {
+            // timeout between trades in different futures
+            await new Promise((resolve) => setTimeout(resolve, 2000));
           }
         }
       }
@@ -314,7 +317,7 @@ export class AppService {
       marketId: market.descriptor.id,
       futureId: future.id,
       notional,
-      participant: this.web3Service.rhoSDK.signerAddress,
+      userAddress: this.web3Service.rhoSDK.signerAddress,
     });
 
     const marketState = await this.getCurrentMarketState(
