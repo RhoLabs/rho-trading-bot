@@ -92,24 +92,6 @@ export class Web3Service {
           );
           process.exit(1);
         }
-
-        if (accountBalance !== allowance) {
-          this.logger.log(
-            `Updating allowance ${underlyingName} (${underlying})...`,
-          );
-          const receipt = await this.rhoSDK.setAllowance(
-            market.descriptor.underlying,
-            spenderAddress,
-            accountBalance,
-          );
-          this.logger.log(
-            `Updated allowance = ${accountBalance}, ${underlyingName} (${underlying}), txnHash: ${receipt.hash}`,
-          );
-        } else {
-          this.logger.log(
-            `Allowance ${underlyingName} (${underlying}): no need to update`,
-          );
-        }
       } catch (e) {
         this.logger.error(
           `Cannot set allowance: ${(e as Error).message}, exit`,
