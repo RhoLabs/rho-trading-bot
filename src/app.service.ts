@@ -116,12 +116,12 @@ export class AppService {
           try {
             await this.initiateTrade(market, future, portfolio);
           } catch (e) {
-            this.logger.error(
+            this.logger.warn(
               `Error on trading future ${future.id}: ${(e as Error).message}`,
             );
           } finally {
             // timeout between trades in different futures
-            this.sleep(2000)
+            await this.sleep(4000)
           }
         }
       }
@@ -399,6 +399,7 @@ export class AppService {
     for(let i = 0; i < this.tradeRetriesCount; i++) {
       try {
         const nonce = await this.web3Service.rhoSDK.getNonce();
+        this.logger.log(`Start trade attempt ${i + 1} / ${this.tradeRetriesCount}, nonce: ${nonce}`)
         const txReceipt = await this.web3Service.rhoSDK.executeTrade(params, {
           nonce
         });
@@ -406,8 +407,8 @@ export class AppService {
         this.metricsService.increaseTradesCounter();
         break;
       } catch (e) {
-        this.logger.error(`Execute trade failed (attempt: ${i + 1} / ${this.tradeRetriesCount})`, e)
-        await this.sleep(2000)
+        this.logger.warn(`Execute trade failed (attempt: ${i + 1} / ${this.tradeRetriesCount})`, e)
+        await this.sleep(10000)
       }
     }
   }
