@@ -15,12 +15,13 @@ import { CronTime } from 'cron';
 import { MarketApiService } from './marketapi/marketapi.service';
 import { MetricsService } from './metrics/metrics.service';
 import {
+  ExecuteTradeParams,
   FutureInfo,
   MarketInfo,
   MarketPortfolio,
   RiskDirection,
-  TradeQuote,
-} from '@rholabs/rho-sdk';
+  TradeQuote
+} from "@rholabs/rho-sdk";
 
 interface CurrentMarketState {
   dv01: bigint;
@@ -34,6 +35,7 @@ export class AppService {
   private readonly logger = new Logger(AppService.name);
   private readonly startTimestamp = Date.now();
   private initialPL = 0;
+  private readonly tradeRetriesCount = 3
 
   constructor(
     private configService: ConfigService,
@@ -59,6 +61,10 @@ export class AppService {
     const marginJob = this.schedulerRegistry.getCronJob('check_margin');
     tradeJob.start();
     marginJob.start();
+  }
+
+  private sleep(timeout: number) {
+    return new Promise((resolve) => setTimeout(resolve, timeout));
   }
 
   @Cron('*/10 * * * * *', {
@@ -115,7 +121,7 @@ export class AppService {
             );
           } finally {
             // timeout between trades in different futures
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            this.sleep(2000)
           }
         }
       }
@@ -386,9 +392,24 @@ export class AppService {
       );
     }
 
-    const txReceipt = await this.web3Service.rhoSDK.executeTrade(tradeParams);
-    this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`);
-    this.metricsService.increaseTradesCounter();
+    await this.executeTradeWithRetries(tradeParams)
+  }
+
+  private async executeTradeWithRetries(params: ExecuteTradeParams) {
+    for(let i = 0; i < this.tradeRetriesCount; i++) {
+      try {
+        const nonce = await this.web3Service.rhoSDK.getNonce();
+        const txReceipt = await this.web3Service.rhoSDK.executeTrade(params, {
+          nonce
+        });
+        this.logger.log(`Trade was successful! txnHash: ${txReceipt.hash}`);
+        this.metricsService.increaseTradesCounter();
+        break;
+      } catch (e) {
+        this.logger.error(`Execute trade failed (attempt: ${i + 1} / ${this.tradeRetriesCount})`, e)
+        await this.sleep(2000)
+      }
+    }
   }
 
   @Cron('*/60 * * * * *', {

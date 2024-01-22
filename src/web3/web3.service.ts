@@ -6,7 +6,7 @@ import {
   MarketApiService,
 } from '../marketapi/marketapi.service';
 import { fromBigInt, profitAndLossTotal } from '../utils';
-import RhoSDK, { MarketInfo, SubgraphAPI } from '@rholabs/rho-sdk';
+import RhoSDK, { MarketInfo, RhoSDKParams, SubgraphAPI } from "@rholabs/rho-sdk";
 
 @Injectable()
 export class Web3Service {
@@ -24,11 +24,17 @@ export class Web3Service {
       process.exit(1);
     }
 
-    this.rhoSDK = new RhoSDK({
+    const sdkParams: RhoSDKParams = {
       privateKey: configService.get('privateKey'),
       network: configService.get('networkType'),
-      rpcUrl: configService.get('rpcUrl'),
-    });
+    }
+
+    const rpcURL = configService.get('rpcUrl')
+    if(rpcURL) {
+      sdkParams.rpcUrl = rpcURL
+    }
+
+    this.rhoSDK = new RhoSDK(sdkParams);
 
     this.subgraphAPI = new SubgraphAPI({
       apiUrl: configService.get('subgraphApiUrl'),
