@@ -4,13 +4,14 @@ import { Web3Service } from './web3/web3.service';
 import { ConfigService } from '@nestjs/config';
 import { RiskDirectionAlias } from './constants';
 import {
+  bigRandomInRange,
   fromBigInt,
   generateRandom,
   getDV01FromNotional,
-  getMax,
+  getMax, getRandomArbitrary,
   marginTotal,
-  toBigInt,
-} from './utils';
+  toBigInt
+} from "./utils";
 import { CronTime } from 'cron';
 import { MarketApiService } from './marketapi/marketapi.service';
 import { MetricsService } from './metrics/metrics.service';
@@ -129,11 +130,10 @@ export class AppService {
       this.logger.error(`Trading error: ${(e as Error).message}`);
     }
 
-    const nextTradingTimeout = generateRandom(
-      avgInterval - Math.floor(avgInterval / 2),
-      avgInterval + Math.floor(avgInterval / 2),
-      Math.floor(avgInterval / 10),
-    );
+    const nextTradeFrom = Math.round(avgInterval / 2)
+    const nextTradeTo = Math.round(avgInterval * 2)
+    const nextTradingTimeout = getRandomArbitrary(nextTradeFrom, nextTradeTo);
+
     job.setTime(new CronTime(new Date(Date.now() + nextTradingTimeout * 1000)));
     this.logger.log(`Next trade attempt in ${nextTradingTimeout} seconds`);
     job.start();
@@ -310,14 +310,19 @@ export class AppService {
       this.configService.get('trading.maxMarginInUse'),
       underlyingDecimals,
     );
-    const tradeAmountStep = maxTradeSize / 10;
-    const randomValue = generateRandom(
-      tradeAmountStep,
-      maxTradeSize,
-      tradeAmountStep,
-    );
-    const notional = toBigInt(randomValue, underlyingDecimals);
-    // this.logger.log(`Calculate trade params: maxTradeSize: ${maxTradeSize}, notional: ${notional}`)
+
+    const notional = bigRandomInRange(
+      toBigInt(maxTradeSize / 10, underlyingDecimals),
+      toBigInt(maxTradeSize, underlyingDecimals)
+    )
+    // const tradeAmountStep = maxTradeSize / 10;
+    // const randomValue = generateRandom(
+    //   tradeAmountStep,
+    //   maxTradeSize,
+    //   tradeAmountStep,
+    // );
+    // const notional = toBigInt(randomValue, underlyingDecimals);
+    this.logger.log(`Calculate trade params: maxTradeSize: ${toBigInt(maxTradeSize, underlyingDecimals)}, notional: ${notional}`)
 
     const tradeQuote = await this.web3Service.rhoSDK.getTradeQuote({
       marketId: market.descriptor.id,
@@ -390,6 +395,7 @@ export class AppService {
       this.logger.log(
         `Approval was successful! txnHash: ${approvalReceipt.hash}`,
       );
+      await this.sleep(4000)
     }
 
     await this.executeTradeWithRetries(tradeParams)
