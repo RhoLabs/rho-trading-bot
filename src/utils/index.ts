@@ -1,5 +1,5 @@
 import { Margin, ProfitAndLoss } from '@rholabs/rho-sdk';
-import crypto from 'crypto'
+import { webcrypto as crypto } from "node:crypto";
 
 export const getRandomArbitrary = (min: number, max: number) => {
   return Math.round(Math.random() * (max - min) + min);
