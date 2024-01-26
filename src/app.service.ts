@@ -4,7 +4,6 @@ import { Web3Service } from './web3/web3.service';
 import { ConfigService } from '@nestjs/config';
 import { RiskDirectionAlias } from './constants';
 import {
-  bigRandomInRange,
   fromBigInt,
   generateRandom,
   getDV01FromNotional,
@@ -248,10 +247,10 @@ export class AppService {
     const direction =
       randomValue <= pReceive ? RiskDirection.RECEIVER : RiskDirection.PAYER;
 
-    this.logger.log(
-      `(rand = ${randomValue}), ` +
-        `trade direction: ${direction} (${RiskDirectionAlias[direction]})`,
-    );
+    // this.logger.log(
+    //   `(rand = ${randomValue}), ` +
+    //     `trade direction: ${direction} (${RiskDirectionAlias[direction]})`,
+    // );
 
     return direction;
   }
@@ -311,17 +310,12 @@ export class AppService {
       underlyingDecimals,
     );
 
-    const notional = bigRandomInRange(
-      toBigInt(maxTradeSize / 10, underlyingDecimals),
-      toBigInt(maxTradeSize, underlyingDecimals)
-    )
-    // const tradeAmountStep = maxTradeSize / 10;
-    // const randomValue = generateRandom(
-    //   tradeAmountStep,
-    //   maxTradeSize,
-    //   tradeAmountStep,
-    // );
-    // const notional = toBigInt(randomValue, underlyingDecimals);
+    const randomValue = generateRandom(
+      maxTradeSize / 10,
+      maxTradeSize,
+      Math.min(100, maxTradeSize / 100),
+    );
+    const notional = toBigInt(randomValue, underlyingDecimals);
     this.logger.log(`Calculate trade params: maxTradeSize: ${toBigInt(maxTradeSize, underlyingDecimals)}, notional: ${notional}`)
 
     const tradeQuote = await this.web3Service.rhoSDK.getTradeQuote({
@@ -375,7 +369,7 @@ export class AppService {
 
     this.logger.log(
       `Trade attempt ` +
-        `futureId: ${tradeParams.futureId}, ` +
+        `${market.descriptor.sourceName} ${market.descriptor.instrumentName}, futureId: ${tradeParams.futureId}, ` +
         `riskDirection: ${tradeParams.riskDirection}, ` +
         `notional: ${tradeParams.notional}, ` +
         `futureRateLimit: ${tradeParams.futureRateLimit}, ` +
