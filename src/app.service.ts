@@ -58,9 +58,10 @@ export class AppService {
     this.logger.log(`Initial P&L: ${this.initialPL} USD`);
 
     const tradeJob = this.schedulerRegistry.getCronJob('update');
-    const marginJob = this.schedulerRegistry.getCronJob('check_margin');
     tradeJob.start();
-    marginJob.start();
+
+    // const marginJob = this.schedulerRegistry.getCronJob('check_margin');
+    // marginJob.start();
   }
 
   private sleep(timeout: number) {
@@ -298,10 +299,9 @@ export class AppService {
   ) {
     const {
       id: marketId,
-      underlyingName,
+      underlying,
       underlyingDecimals,
-      sourceName,
-      instrumentName,
+      underlyingName
     } = market.descriptor;
     const { id: futureId } = future;
     const maxTradeSize = this.configService.get('trading.maxTradeSize');
@@ -309,6 +309,8 @@ export class AppService {
       this.configService.get('trading.maxMarginInUse'),
       underlyingDecimals,
     );
+
+    const underlyingBalance = await this.web3Service.rhoSDK.getBalanceOf(underlying, this.web3Service.rhoSDK.signerAddress)
 
     const randomValue = generateRandom(
       maxTradeSize / 10,
@@ -356,6 +358,11 @@ export class AppService {
       selectedQuote.tradeInfo.tradeRate +
       BigInt(0.1 * 10 ** 16) *
         BigInt(tradeDirection === RiskDirection.RECEIVER ? -1 : 1);
+
+    if(depositAmount > 0n && depositAmount > underlyingBalance) {
+      this.logger.warn(`Deposit amount (${depositAmount}) > underlying balance (${underlyingBalance}), trade is not available with current params. Refill bot account ${this.web3Service.rhoSDK.signerAddress} ${underlyingName} balance.`)
+      return false
+    }
 
     const tradeParams = {
       marketId,
@@ -413,61 +420,61 @@ export class AppService {
     }
   }
 
-  @Cron('*/60 * * * * *', {
-    name: 'check_margin',
-    disabled: true,
-  })
-  async checkBotMargin() {
-    if (
-      !this.configService.get('marginWithdrawThreshold') ||
-      !this.configService.get('marginWithdrawAmount')
-    ) {
-      return false;
-    }
-
-    const marketIds = this.configService.get('marketIds');
-    const markets = await this.web3Service.rhoSDK.getActiveMarkets();
-
-    for (const marketId of marketIds) {
-      const market = markets.find(
-        (market) => market.descriptor.id === marketId,
-      );
-      if (market) {
-        const { underlyingDecimals } = market.descriptor;
-        const marginWithdrawThreshold = toBigInt(
-          this.configService.get('marginWithdrawThreshold'),
-          underlyingDecimals,
-        );
-        const marginWithdrawAmount = toBigInt(
-          this.configService.get('marginWithdrawAmount'),
-          underlyingDecimals,
-        );
-
-        const availableToWithdraw =
-          (await this.web3Service.rhoSDK.getWithdrawableMargin({
-            marketId,
-            userAddress: this.web3Service.rhoSDK.signerAddress,
-          })) as bigint;
-
-        if (
-          availableToWithdraw > marginWithdrawThreshold &&
-          availableToWithdraw > marginWithdrawAmount
-        ) {
-          this.logger.log(
-            `[withdraw margin] Available to withdraw: ${availableToWithdraw}, marginWithdrawThreshold: ${marginWithdrawThreshold}, marginWithdrawAmount: ${marginWithdrawAmount}`,
-          );
-          this.logger.log(
-            `[withdraw margin] Start withdraw margin amount: ${marginWithdrawAmount}`,
-          );
-          const tx = await this.web3Service.rhoSDK.withdraw({
-            marketId,
-            amount: marginWithdrawAmount,
-          });
-          this.logger.log(`Withdraw margin transaction hash: ${tx.hash}`);
-        } else {
-          // this.logger.log('Skip withdraw margin')
-        }
-      }
-    }
-  }
+  // @Cron('*/60 * * * * *', {
+  //   name: 'check_margin',
+  //   disabled: true,
+  // })
+  // async checkBotMargin() {
+  //   if (
+  //     !this.configService.get('marginWithdrawThreshold') ||
+  //     !this.configService.get('marginWithdrawAmount')
+  //   ) {
+  //     return false;
+  //   }
+  //
+  //   const marketIds = this.configService.get('marketIds');
+  //   const markets = await this.web3Service.rhoSDK.getActiveMarkets();
+  //
+  //   for (const marketId of marketIds) {
+  //     const market = markets.find(
+  //       (market) => market.descriptor.id === marketId,
+  //     );
+  //     if (market) {
+  //       const { underlyingDecimals } = market.descriptor;
+  //       const marginWithdrawThreshold = toBigInt(
+  //         this.configService.get('marginWithdrawThreshold'),
+  //         underlyingDecimals,
+  //       );
+  //       const marginWithdrawAmount = toBigInt(
+  //         this.configService.get('marginWithdrawAmount'),
+  //         underlyingDecimals,
+  //       );
+  //
+  //       const availableToWithdraw =
+  //         (await this.web3Service.rhoSDK.getWithdrawableMargin({
+  //           marketId,
+  //           userAddress: this.web3Service.rhoSDK.signerAddress,
+  //         })) as bigint;
+  //
+  //       if (
+  //         availableToWithdraw > marginWithdrawThreshold &&
+  //         availableToWithdraw > marginWithdrawAmount
+  //       ) {
+  //         this.logger.log(
+  //           `[withdraw margin] Available to withdraw: ${availableToWithdraw}, marginWithdrawThreshold: ${marginWithdrawThreshold}, marginWithdrawAmount: ${marginWithdrawAmount}`,
+  //         );
+  //         this.logger.log(
+  //           `[withdraw margin] Start withdraw margin amount: ${marginWithdrawAmount}`,
+  //         );
+  //         const tx = await this.web3Service.rhoSDK.withdraw({
+  //           marketId,
+  //           amount: marginWithdrawAmount,
+  //         });
+  //         this.logger.log(`Withdraw margin transaction hash: ${tx.hash}`);
+  //       } else {
+  //         // this.logger.log('Skip withdraw margin')
+  //       }
+  //     }
+  //   }
+  // }
 }
