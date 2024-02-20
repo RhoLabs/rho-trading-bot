@@ -40,10 +40,6 @@ export class AppService {
   private readonly logger = new Logger(AppService.name);
   // private readonly startTimestamp = Date.now();
   // private initialPL = 0;
-  private futureTradeInfo = new LRUCache<string, FutureTradeInfo>({
-    max: 100,
-    ttl: 60 * 60 * 1000
-  })
 
   constructor(
     private configService: ConfigService,
@@ -67,13 +63,21 @@ export class AppService {
 
     const updateTask = this.schedulerRegistry.getCronJob('update_tasks');
     updateTask.start();
-
-    // const marginJob = this.schedulerRegistry.getCronJob('check_margin');
-    // marginJob.start();
   }
 
   private sleep(timeout: number) {
     return new Promise((resolve) => setTimeout(resolve, timeout));
+  }
+
+  private getTimeoutName(futureId: string) {
+    return `trade_task_${futureId}`
+  }
+
+  private getTimeoutByName(name: string) {
+    try {
+      return this.schedulerRegistry.getTimeout(this.getTimeoutName(name))
+    } catch (e) {}
+    return null
   }
 
   @Cron(CronExpression.EVERY_30_SECONDS, {
@@ -86,7 +90,6 @@ export class AppService {
 
     const configMarketIds = this.configService.get('marketIds') as string[];
     const configFutureIds = this.configService.get('futureIds') as string[];
-    const avgInterval = this.configService.get('trading.avgInterval');
 
     try {
       let markets = await this.web3Service.rhoSDK.getActiveMarkets();
@@ -94,47 +97,44 @@ export class AppService {
         configMarketIds.includes(item.descriptor.id.toLowerCase()),
       );
 
+      this.logger.log(`Markets count: ${markets.length}`)
+
       for (const market of markets) {
         const futures = market.futures.filter((future) =>
           configFutureIds.includes(future.id.toLowerCase()),
         );
-
+        this.logger.log(`Futures count: ${futures.length}`)
         for (const future of futures) {
-          let startTrade = false
-
-          const info = this.futureTradeInfo.get(future.id)
-          if (info) {
-            // TODO: refactor with scheduler registry
-            if(Math.abs(Date.now() - info.nextTradeTimestamp) < 60 * 1000) {
-
-            }
-          } else {
-            // first trade
-            startTrade = true
+          if(!this.getTimeoutByName(this.getTimeoutName(future.id))) {
+            await this.scheduleTrade(market, future)
           }
-
-          if(startTrade) {
-            await this.initiateTrade(market, future);
-          }
-
-          const nextTradingTimeout = getRandomArbitrary(
-            Math.round(avgInterval / 2), Math.round(avgInterval * 2)
-          );
-          const nextTradeTimestamp = Date.now() + nextTradingTimeout * 1000
-
-          this.futureTradeInfo.set(future.id, {
-            lastTradeTimestamp: Date.now(),
-            nextTradeTimestamp
-          })
-
-          this.logger.log(`Next trade attempt at ${moment(nextTradeTimestamp).format('HH:mm:ss')}, in ${nextTradingTimeout} seconds`);
         }
       }
     } catch (e) {
-      this.logger.error(`Failed to update tasks:`, e);
+      this.logger.error(`Failed to update trade tasks:`, e);
     }
-
     job.start();
+  }
+
+  private async scheduleTrade(market: MarketInfo, future: FutureInfo) {
+    const avgInterval = this.configService.get('trading.avgInterval');
+    await this.initiateTrade(market, future);
+
+    const nextTradingTimeout = getRandomArbitrary(
+      Math.round(avgInterval / 2), Math.round(avgInterval * 2)
+    );
+    const nextTradeTimestamp = Date.now() + nextTradingTimeout * 1000
+
+    const timeout = setTimeout(() => this.scheduleTrade(market, future), nextTradingTimeout * 1000);
+
+    const timeoutName = this.getTimeoutName(future.id)
+    if(this.getTimeoutByName(timeoutName)) {
+      this.schedulerRegistry.deleteTimeout(timeoutName)
+    }
+    console.log('timeouts', this.schedulerRegistry.getTimeouts())
+    this.schedulerRegistry.addTimeout(timeoutName, timeout);
+
+    this.logger.log(`Next trade attempt at ${moment(nextTradeTimestamp).format('HH:mm:ss')}, in ${nextTradingTimeout} seconds`);
   }
 
   getTradeDirection(
