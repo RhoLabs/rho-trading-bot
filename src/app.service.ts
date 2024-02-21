@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
+import { Cron, CronExpression, Interval, SchedulerRegistry } from '@nestjs/schedule';
 import { Web3Service } from './web3/web3.service';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -20,7 +20,6 @@ import {
   RiskDirection,
   TradeQuote,
 } from '@rholabs/rho-sdk';
-import { LRUCache } from 'lru-cache';
 import moment from 'moment';
 
 interface CurrentMarketState {
@@ -30,27 +29,19 @@ interface CurrentMarketState {
   avgRate: bigint;
 }
 
-interface FutureTradeInfo {
-  lastTradeTimestamp: number
-  nextTradeTimestamp: number
-}
-
 @Injectable()
 export class AppService {
   private readonly logger = new Logger(AppService.name);
-  // private readonly startTimestamp = Date.now();
-  // private initialPL = 0;
 
   constructor(
     private configService: ConfigService,
     private web3Service: Web3Service,
     private schedulerRegistry: SchedulerRegistry,
-    private marketApiService: MarketApiService,
     private metricsService: MetricsService,
   ) {
     this.web3Service
       .bootstrap()
-      .then(() => this.marketApiService.bootstrap())
+      // .then(() => this.marketApiService.bootstrap())
       .then(() => this.bootstrap())
       .then(() => this.logger.log(`Bot is running`));
   }
@@ -61,33 +52,19 @@ export class AppService {
     // this.initialPL = await this.web3Service.getProfitAndLoss();
     // this.logger.log(`Initial P&L: ${this.initialPL} USD`);
 
-    const updateTask = this.schedulerRegistry.getCronJob('update_tasks');
-    updateTask.start();
+   this.updateTasksLoop()
   }
 
   private sleep(timeout: number) {
     return new Promise((resolve) => setTimeout(resolve, timeout));
   }
 
-  private getTimeoutName(futureId: string) {
-    return `trade_task_${futureId}`
-  }
-
   private getTimeoutByName(name: string) {
-    try {
-      return this.schedulerRegistry.getTimeout(this.getTimeoutName(name))
-    } catch (e) {}
-    return null
+    const timeouts = this.schedulerRegistry.getTimeouts()
+    return timeouts.find(timeout => timeout === name)
   }
 
-  @Cron(CronExpression.EVERY_30_SECONDS, {
-    name: 'update_tasks',
-    disabled: true,
-  })
-  async updateTasks() {
-    const job = this.schedulerRegistry.getCronJob('update_tasks');
-    job.stop();
-
+  async updateTasksLoop() {
     const configMarketIds = this.configService.get('marketIds') as string[];
     const configFutureIds = this.configService.get('futureIds') as string[];
 
@@ -97,23 +74,25 @@ export class AppService {
         configMarketIds.includes(item.descriptor.id.toLowerCase()),
       );
 
-      this.logger.log(`Markets count: ${markets.length}`)
+      // this.logger.log(`Markets count: ${markets.length}`)
 
       for (const market of markets) {
         const futures = market.futures.filter((future) =>
           configFutureIds.includes(future.id.toLowerCase()),
         );
-        this.logger.log(`Futures count: ${futures.length}`)
+        // this.logger.log(`Futures count: ${futures.length}`)
         for (const future of futures) {
-          if(!this.getTimeoutByName(this.getTimeoutName(future.id))) {
+          if(!this.getTimeoutByName(future.id)) {
             await this.scheduleTrade(market, future)
           }
         }
       }
     } catch (e) {
       this.logger.error(`Failed to update trade tasks:`, e);
+    } finally {
+      await this.sleep(30 * 60_1000)
+      this.updateTasksLoop()
     }
-    job.start();
   }
 
   private async scheduleTrade(market: MarketInfo, future: FutureInfo) {
@@ -127,11 +106,10 @@ export class AppService {
 
     const timeout = setTimeout(() => this.scheduleTrade(market, future), nextTradingTimeout * 1000);
 
-    const timeoutName = this.getTimeoutName(future.id)
+    const timeoutName = future.id
     if(this.getTimeoutByName(timeoutName)) {
       this.schedulerRegistry.deleteTimeout(timeoutName)
     }
-    console.log('timeouts', this.schedulerRegistry.getTimeouts())
     this.schedulerRegistry.addTimeout(timeoutName, timeout);
 
     this.logger.log(`Next trade attempt at ${moment(nextTradeTimestamp).format('HH:mm:ss')}, in ${nextTradingTimeout} seconds`);
