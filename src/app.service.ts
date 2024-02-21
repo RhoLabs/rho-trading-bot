@@ -115,7 +115,7 @@ export class AppService {
     }
     this.schedulerRegistry.addTimeout(timeoutName, timeout);
 
-    this.logger.log(`Next trade attempt at ${moment(nextTradeTimestamp).format('HH:mm:ss')}, in ${nextTradingTimeout} seconds`);
+    this.logger.log(`Next trade attempt at ${moment(nextTradeTimestamp).format('HH:mm:ss')}, in ${nextTradingTimeout} seconds (${moment.utc(nextTradingTimeout*1000).format('HH:mm:ss')})`);
   }
 
   getTradeDirection(
