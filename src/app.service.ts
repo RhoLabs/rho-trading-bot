@@ -74,13 +74,16 @@ export class AppService {
         configMarketIds.includes(item.descriptor.id.toLowerCase()),
       );
 
-      // this.logger.log(`Markets count: ${markets.length}`)
+      const futures = markets.map(market => {
+        return market.futures.filter(future => configFutureIds.includes(future.id))
+      }).flat()
 
-      for (const market of markets) {
-        const futures = market.futures.filter((future) =>
-          configFutureIds.includes(future.id.toLowerCase()),
-        );
-        // this.logger.log(`Futures count: ${futures.length}`)
+      if(this.schedulerRegistry.getTimeouts().length === 0) {
+        this.logger.log(`Init new trading tasks. Futures count: ${futures.length}.`)
+      }
+
+      for (const future of futures) {
+        const market = markets.find(market => market.descriptor.id === future.marketId)
         for (const future of futures) {
           if(!this.getTimeoutByName(future.id)) {
             await this.scheduleTrade(market, future)
