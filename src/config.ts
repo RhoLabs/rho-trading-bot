@@ -20,7 +20,7 @@ export default () => ({
   marginWithdrawAmount: Number(process.env.MARGIN_WITHDRAW_AMOUNT || '0'),
   trading: {
     // Average interval between trade attempts [seconds]
-    avgInterval: Number(process.env.TRADE_AVERAGE_INTERVAL || '600'),
+    avgInterval: Math.max(Number(process.env.TRADE_AVERAGE_INTERVAL || '600'), 60),
     maxRisk: Number(process.env.TRADE_MAX_RISK || '10000'),
     // Max notional value [USDT]
     maxTradeSize: Number(process.env.TRADE_MAX_SIZE || '1000'),

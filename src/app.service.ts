@@ -1,17 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, SchedulerRegistry } from '@nestjs/schedule';
+import { Cron, CronExpression, Interval, SchedulerRegistry } from '@nestjs/schedule';
 import { Web3Service } from './web3/web3.service';
 import { ConfigService } from '@nestjs/config';
-import { RiskDirectionAlias } from './constants';
 import {
   fromBigInt,
   generateRandom,
   getDV01FromNotional,
   getMax, getRandomArbitrary,
   marginTotal,
-  toBigInt
-} from "./utils";
-import { CronTime } from 'cron';
+  toBigInt,
+} from './utils';
 import { MarketApiService } from './marketapi/marketapi.service';
 import { MetricsService } from './metrics/metrics.service';
 import {
@@ -20,8 +18,9 @@ import {
   MarketInfo,
   MarketPortfolio,
   RiskDirection,
-  TradeQuote
-} from "@rholabs/rho-sdk";
+  TradeQuote,
+} from '@rholabs/rho-sdk';
+import moment from 'moment';
 
 interface CurrentMarketState {
   dv01: bigint;
@@ -33,20 +32,16 @@ interface CurrentMarketState {
 @Injectable()
 export class AppService {
   private readonly logger = new Logger(AppService.name);
-  private readonly startTimestamp = Date.now();
-  private initialPL = 0;
-  private readonly tradeRetriesCount = 3
 
   constructor(
     private configService: ConfigService,
     private web3Service: Web3Service,
     private schedulerRegistry: SchedulerRegistry,
-    private marketApiService: MarketApiService,
     private metricsService: MetricsService,
   ) {
     this.web3Service
       .bootstrap()
-      .then(() => this.marketApiService.bootstrap())
+      // .then(() => this.marketApiService.bootstrap())
       .then(() => this.bootstrap())
       .then(() => this.logger.log(`Bot is running`));
   }
@@ -54,89 +49,73 @@ export class AppService {
   async bootstrap() {
     this.logger.log(`Network type: ${this.configService.get('networkType')}`);
 
-    this.initialPL = await this.web3Service.getProfitAndLoss();
-    this.logger.log(`Initial P&L: ${this.initialPL} USD`);
+    // this.initialPL = await this.web3Service.getProfitAndLoss();
+    // this.logger.log(`Initial P&L: ${this.initialPL} USD`);
 
-    const tradeJob = this.schedulerRegistry.getCronJob('update');
-    tradeJob.start();
-
-    // const marginJob = this.schedulerRegistry.getCronJob('check_margin');
-    // marginJob.start();
+   this.updateTasksLoop()
   }
 
   private sleep(timeout: number) {
     return new Promise((resolve) => setTimeout(resolve, timeout));
   }
 
-  @Cron('*/10 * * * * *', {
-    name: 'update',
-    disabled: true, // Update is launched from "bootstrap"
-  })
-  async runUpdate() {
+  private getTimeoutByName(name: string) {
+    const timeouts = this.schedulerRegistry.getTimeouts()
+    return timeouts.find(timeout => timeout === name)
+  }
+
+  async updateTasksLoop() {
     const configMarketIds = this.configService.get('marketIds') as string[];
     const configFutureIds = this.configService.get('futureIds') as string[];
-    const configWarningLosses = this.configService.get('trading.warningLosses');
-    const avgInterval = this.configService.get('trading.avgInterval');
-
-    const job = this.schedulerRegistry.getCronJob('update');
-    job.stop();
 
     try {
-      if (Date.now() - this.startTimestamp > 24 * 60 * 60 * 1000) {
-        const currentPL = await this.web3Service.getProfitAndLoss();
-        if (this.initialPL - currentPL > configWarningLosses) {
-          this.logger.error(
-            `ALERT: P&L dropped below min level. Current P&L $${currentPL}, initial P&L $${this.initialPL}, max loss from config: $${configWarningLosses}. Skip attempt.`,
-          );
-        }
-      }
-
       let markets = await this.web3Service.rhoSDK.getActiveMarkets();
+      markets = markets.filter((item) =>
+        configMarketIds.includes(item.descriptor.id.toLowerCase()),
+      );
 
-      if (configMarketIds.length > 0) {
-        markets = markets.filter((item) =>
-          configMarketIds.includes(item.descriptor.id.toLowerCase()),
-        );
+      const futures = markets.map(market => {
+        return market.futures.filter(future => configFutureIds.includes(future.id))
+      }).flat()
+
+      if(this.schedulerRegistry.getTimeouts().length === 0) {
+        this.logger.log(`Init new trading tasks. Futures count: ${futures.length}.`)
       }
 
-      for (const market of markets) {
-        let futures = market.futures;
-
-        if (configFutureIds.length > 0) {
-          futures = futures.filter((future) =>
-            configFutureIds.includes(future.id.toLowerCase()),
-          );
-        }
-
-        const portfolio = await this.web3Service.rhoSDK.getMarketPortfolio({
-          marketId: market.descriptor.id,
-          userAddress: this.web3Service.rhoSDK.signerAddress,
-        });
-
+      for (const future of futures) {
+        const market = markets.find(market => market.descriptor.id === future.marketId)
         for (const future of futures) {
-          try {
-            await this.initiateTrade(market, future, portfolio);
-          } catch (e) {
-            this.logger.warn(
-              `Error on trading future ${future.id}: ${(e as Error).message}`,
-            );
-          } finally {
-            // timeout between trades in different futures
-            await this.sleep(4000)
+          if(!this.getTimeoutByName(future.id)) {
+            await this.scheduleTrade(market, future)
           }
         }
       }
     } catch (e) {
-      this.logger.error(`Trading error: ${(e as Error).message}`);
+      this.logger.error(`Failed to update trade tasks:`, e);
+    } finally {
+      await this.sleep(30 * 60_1000)
+      this.updateTasksLoop()
     }
+  }
 
-    const nextTradeFrom = Math.round(avgInterval / 2)
-    const nextTradeTo = Math.round(avgInterval * 2)
-    const nextTradingTimeout = getRandomArbitrary(nextTradeFrom, nextTradeTo);
+  private async scheduleTrade(market: MarketInfo, future: FutureInfo) {
+    const avgInterval = this.configService.get('trading.avgInterval');
+    await this.initiateTrade(market, future);
 
-    job.setTime(new CronTime(new Date(Date.now() + nextTradingTimeout * 1000)));
-    this.logger.log(`Next trade attempt in ${nextTradingTimeout} seconds`);
-    job.start();
+    const nextTradingTimeout = getRandomArbitrary(
+      Math.round(avgInterval / 2), Math.round(avgInterval * 2)
+    );
+    const nextTradeTimestamp = Date.now() + nextTradingTimeout * 1000
+
+    const timeout = setTimeout(() => this.scheduleTrade(market, future), nextTradingTimeout * 1000);
+
+    const timeoutName = future.id
+    if(this.getTimeoutByName(timeoutName)) {
+      this.schedulerRegistry.deleteTimeout(timeoutName)
+    }
+    this.schedulerRegistry.addTimeout(timeoutName, timeout);
+
+    this.logger.log(`Next trade attempt at ${moment(nextTradeTimestamp).format('HH:mm:ss')}, in ${nextTradingTimeout} seconds (${moment.utc(nextTradingTimeout*1000).format('HH:mm:ss')})`);
   }
 
   getTradeDirection(
@@ -295,7 +274,6 @@ export class AppService {
   async initiateTrade(
     market: MarketInfo,
     future: FutureInfo,
-    portfolio: MarketPortfolio,
   ) {
     const {
       id: marketId,
@@ -309,6 +287,11 @@ export class AppService {
       this.configService.get('trading.maxMarginInUse'),
       underlyingDecimals,
     );
+
+    const portfolio = await this.web3Service.rhoSDK.getMarketPortfolio({
+      marketId: market.descriptor.id,
+      userAddress: this.web3Service.rhoSDK.signerAddress,
+    });
 
     const underlyingBalance = await this.web3Service.rhoSDK.getBalanceOf(underlying, this.web3Service.rhoSDK.signerAddress)
 
@@ -403,10 +386,11 @@ export class AppService {
   }
 
   private async executeTradeWithRetries(params: ExecuteTradeParams) {
-    for(let i = 0; i < this.tradeRetriesCount; i++) {
+    const retriesCount = 3
+    for(let i = 0; i < retriesCount; i++) {
       try {
         const nonce = await this.web3Service.rhoSDK.getNonce();
-        this.logger.log(`Start trade attempt ${i + 1} / ${this.tradeRetriesCount}, nonce: ${nonce}`)
+        this.logger.log(`Start trade attempt ${i + 1} / ${retriesCount}, nonce: ${nonce}`)
         const txReceipt = await this.web3Service.rhoSDK.executeTrade(params, {
           nonce
         });
@@ -414,7 +398,7 @@ export class AppService {
         this.metricsService.increaseTradesCounter();
         break;
       } catch (e) {
-        this.logger.warn(`Execute trade failed (attempt: ${i + 1} / ${this.tradeRetriesCount})`, e)
+        this.logger.warn(`Execute trade failed (attempt: ${i + 1} / ${retriesCount})`, e)
         await this.sleep(10000)
       }
     }
