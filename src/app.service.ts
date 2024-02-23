@@ -342,10 +342,10 @@ export class AppService {
       BigInt(0.1 * 10 ** 16) *
         BigInt(tradeDirection === RiskDirection.RECEIVER ? -1 : 1);
 
-    if(depositAmount > 0n && depositAmount > underlyingBalance) {
-      this.logger.warn(`Deposit amount (${depositAmount}) > underlying balance (${underlyingBalance}), trade is not available with current params. Refill bot account ${this.web3Service.rhoSDK.signerAddress} ${underlyingName} balance.`)
-      return false
-    }
+    // if(depositAmount > 0n && depositAmount > underlyingBalance) {
+    //   this.logger.warn(`Deposit amount (${depositAmount}) > underlying balance (${underlyingBalance}), trade is not available with current params. Refill bot account ${this.web3Service.rhoSDK.signerAddress} ${underlyingName} balance.`)
+    //   return false
+    // }
 
     const tradeParams = {
       marketId,
