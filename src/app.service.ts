@@ -374,21 +374,20 @@ export class AppService {
         this.web3Service.rhoSDK.signerAddress,
         spenderAddress,
       );
-      const accountBalance = await this.web3Service.rhoSDK.getBalanceOf(
-        underlying,
-        this.web3Service.rhoSDK.signerAddress,
-      );
-
+      // const accountBalance = await this.web3Service.rhoSDK.getBalanceOf(
+      //   underlying,
+      //   this.web3Service.rhoSDK.signerAddress,
+      // );
+      let approvalAmount = 1000000000n
       // To save the fees, increase the allowance by the bot balance amount
       if(allowance < tradeParams.depositAmount) {
         this.logger.log(
-          `Increasing the allowance ${market.descriptor.underlying} ${accountBalance}`,
+          `Increasing the allowance ${market.descriptor.underlying} ${approvalAmount}`,
         );
-
         const approvalReceipt = await this.web3Service.rhoSDK.setAllowance(
           market.descriptor.underlying,
           this.web3Service.rhoSDK.config.routerAddress,
-          accountBalance,
+          approvalAmount,
         );
         this.logger.log(
           `Approval was successful! txnHash: ${approvalReceipt.hash}`,
