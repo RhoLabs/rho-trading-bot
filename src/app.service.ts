@@ -368,18 +368,33 @@ export class AppService {
     );
 
     if (tradeParams.depositAmount > 0) {
-      this.logger.log(
-        `Increasing allowance for depositAmount ${depositAmount}`,
+      const spenderAddress = this.web3Service.rhoSDK.config.routerAddress;
+      const allowance = await this.web3Service.rhoSDK.getAllowance(
+        underlying,
+        this.web3Service.rhoSDK.signerAddress,
+        spenderAddress,
       );
-      const approvalReceipt = await this.web3Service.rhoSDK.setAllowance(
-        market.descriptor.underlying,
-        this.web3Service.rhoSDK.config.routerAddress,
-        tradeParams.depositAmount,
+      const accountBalance = await this.web3Service.rhoSDK.getBalanceOf(
+        underlying,
+        this.web3Service.rhoSDK.signerAddress,
       );
-      this.logger.log(
-        `Approval was successful! txnHash: ${approvalReceipt.hash}`,
-      );
-      await this.sleep(4000)
+
+      // To save the fees, increase the allowance by the bot balance amount
+      if(allowance < tradeParams.depositAmount) {
+        this.logger.log(
+          `Increasing the allowance ${market.descriptor.underlying} ${accountBalance}`,
+        );
+
+        const approvalReceipt = await this.web3Service.rhoSDK.setAllowance(
+          market.descriptor.underlying,
+          this.web3Service.rhoSDK.config.routerAddress,
+          accountBalance,
+        );
+        this.logger.log(
+          `Approval was successful! txnHash: ${approvalReceipt.hash}`,
+        );
+        await this.sleep(4000)
+      }
     }
 
     await this.executeTradeWithRetries(tradeParams)
