@@ -378,9 +378,9 @@ export class AppService {
       //   underlying,
       //   this.web3Service.rhoSDK.signerAddress,
       // );
-      let approvalAmount = 10000000000n
       // To save the fees, increase the allowance by the bot balance amount
       if(allowance < tradeParams.depositAmount) {
+        let approvalAmount = 10000n * 10n ** underlyingDecimals
         this.logger.log(
           `Increasing the allowance ${market.descriptor.underlying} ${approvalAmount}`,
         );
