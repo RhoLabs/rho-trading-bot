@@ -31,5 +31,7 @@ export default () => ({
     xFactor: Number(process.env.TRADE_X_FACTOR || '5'),
     yFactor: Number(process.env.TRADE_Y_FACTOR || '15'),
     zFactor: Number(process.env.TRADE_Z_FACTOR || '10'),
+    px1: Number(process.env.TRADE_PX_1 || 0.6),
+    px2: Number(process.env.TRADE_PX_2 || 0.75),
   },
 });
