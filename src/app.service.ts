@@ -155,13 +155,18 @@ export class AppService {
       `Current market state: \ndv01: ${dv01}, riskLevel: ${riskLevel}, maxRisk: ${maxRisk}, avgRate: ${avgRate}, marketRate: ${marketRate}`,
     );
 
+    const tradePx1 = this.configService.get('trading.px1')
+    const tradePy1 = 1 - tradePx1
+    const tradePx2 = this.configService.get('trading.px2')
+    const tradePy2 = 1 - tradePx2
+
     // Rule 1
     if (dv01 <= riskLevel && marketRate > (1 + xFactor) * avgRate) {
-      pReceive = 0.65;
+      pReceive = tradePx1;
     }
     // Rule 2
     if (dv01 <= riskLevel && marketRate < (1 - xFactor) * avgRate) {
-      pReceive = 0.35;
+      pReceive = tradePy1;
     }
     // Rule 3.a
     if (
@@ -170,7 +175,7 @@ export class AppService {
       riskDirection === RiskDirection.RECEIVER &&
       marketRate < (1 - yFactor) * avgRate
     ) {
-      pReceive = 0.2;
+      pReceive = tradePy2;
     }
     // Rule 3.b
     if (
@@ -179,7 +184,7 @@ export class AppService {
       riskDirection === RiskDirection.RECEIVER &&
       marketRate > (1 + zFactor) * avgRate
     ) {
-      pReceive = 0.65;
+      pReceive = tradePx1;
     }
     // Rule 4.a
     if (
@@ -188,7 +193,7 @@ export class AppService {
       riskDirection === RiskDirection.PAYER &&
       marketRate > (1 + yFactor) * avgRate
     ) {
-      pReceive = 0.8;
+      pReceive = tradePx2;
     }
     // Rule 4.b
     if (
@@ -197,7 +202,7 @@ export class AppService {
       riskDirection === RiskDirection.PAYER &&
       marketRate < (1 - zFactor) * avgRate
     ) {
-      pReceive = 0.35;
+      pReceive = tradePy1;
     }
     // Rule 5
     if (dv01 >= maxRisk && riskDirection === RiskDirection.RECEIVER) {
@@ -368,18 +373,32 @@ export class AppService {
     );
 
     if (tradeParams.depositAmount > 0) {
-      this.logger.log(
-        `Increasing allowance for depositAmount ${depositAmount}`,
+      const spenderAddress = this.web3Service.rhoSDK.config.routerAddress;
+      const allowance = await this.web3Service.rhoSDK.getAllowance(
+        underlying,
+        this.web3Service.rhoSDK.signerAddress,
+        spenderAddress,
       );
-      const approvalReceipt = await this.web3Service.rhoSDK.setAllowance(
-        market.descriptor.underlying,
-        this.web3Service.rhoSDK.config.routerAddress,
-        tradeParams.depositAmount,
-      );
-      this.logger.log(
-        `Approval was successful! txnHash: ${approvalReceipt.hash}`,
-      );
-      await this.sleep(4000)
+      // const accountBalance = await this.web3Service.rhoSDK.getBalanceOf(
+      //   underlying,
+      //   this.web3Service.rhoSDK.signerAddress,
+      // );
+      // To save the fees, increase the allowance by the bot balance amount
+      if(allowance < tradeParams.depositAmount) {
+        let approvalAmount = 10000n * 10n ** underlyingDecimals
+        this.logger.log(
+          `Increasing the allowance ${market.descriptor.underlying} ${approvalAmount}`,
+        );
+        const approvalReceipt = await this.web3Service.rhoSDK.setAllowance(
+          market.descriptor.underlying,
+          this.web3Service.rhoSDK.config.routerAddress,
+          approvalAmount,
+        );
+        this.logger.log(
+          `Approval was successful! txnHash: ${approvalReceipt.hash}`,
+        );
+        await this.sleep(4000)
+      }
     }
 
     await this.executeTradeWithRetries(tradeParams)
