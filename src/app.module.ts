@@ -5,7 +5,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Web3Service } from './web3/web3.service';
-import { OracleService } from './oracle/oracle.service';
 import { MarketApiService } from './marketapi/marketapi.service';
 import { MetricsService } from './metrics/metrics.service';
 import configuration from './config';
@@ -22,7 +21,6 @@ import configuration from './config';
   providers: [
     AppService,
     Web3Service,
-    OracleService,
     MarketApiService,
     MetricsService,
   ],

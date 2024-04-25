@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression, Interval, SchedulerRegistry } from '@nestjs/schedule';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { Web3Service } from './web3/web3.service';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -10,7 +10,6 @@ import {
   marginTotal,
   toBigInt,
 } from './utils';
-import { MarketApiService } from './marketapi/marketapi.service';
 import { MetricsService } from './metrics/metrics.service';
 import {
   ExecuteTradeParams,
@@ -41,16 +40,12 @@ export class AppService {
   ) {
     this.web3Service
       .bootstrap()
-      // .then(() => this.marketApiService.bootstrap())
       .then(() => this.bootstrap())
       .then(() => this.logger.log(`Bot is running`));
   }
 
   async bootstrap() {
     this.logger.log(`Network type: ${this.configService.get('networkType')}`);
-
-    // this.initialPL = await this.web3Service.getProfitAndLoss();
-    // this.logger.log(`Initial P&L: ${this.initialPL} USD`);
 
    this.updateTasksLoop()
   }
@@ -284,9 +279,10 @@ export class AppService {
       id: marketId,
       underlying,
       underlyingDecimals,
-      underlyingName
     } = market.descriptor;
+
     const { id: futureId } = future;
+
     const maxTradeSize = this.configService.get('trading.maxTradeSize');
     const maxMarginInUse = toBigInt(
       this.configService.get('trading.maxMarginInUse'),
@@ -297,8 +293,6 @@ export class AppService {
       marketId: market.descriptor.id,
       userAddress: this.web3Service.rhoSDK.signerAddress,
     });
-
-    const underlyingBalance = await this.web3Service.rhoSDK.getBalanceOf(underlying, this.web3Service.rhoSDK.signerAddress)
 
     const randomValue = generateRandom(
       maxTradeSize / 10,
@@ -347,11 +341,6 @@ export class AppService {
       BigInt(0.1 * 10 ** 16) *
         BigInt(tradeDirection === RiskDirection.RECEIVER ? -1 : 1);
 
-    // if(depositAmount > 0n && depositAmount > underlyingBalance) {
-    //   this.logger.warn(`Deposit amount (${depositAmount}) > underlying balance (${underlyingBalance}), trade is not available with current params. Refill bot account ${this.web3Service.rhoSDK.signerAddress} ${underlyingName} balance.`)
-    //   return false
-    // }
-
     const tradeParams = {
       marketId,
       futureId,
@@ -379,10 +368,7 @@ export class AppService {
         this.web3Service.rhoSDK.signerAddress,
         spenderAddress,
       );
-      // const accountBalance = await this.web3Service.rhoSDK.getBalanceOf(
-      //   underlying,
-      //   this.web3Service.rhoSDK.signerAddress,
-      // );
+
       // To save the fees, increase the allowance by the bot balance amount
       if(allowance < tradeParams.depositAmount) {
         let approvalAmount = 10000n * 10n ** underlyingDecimals
