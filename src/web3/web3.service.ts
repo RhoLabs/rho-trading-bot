@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { formatEther, formatUnits } from 'ethers';
+import { formatEther, formatUnits, TransactionRequest } from 'ethers';
 import {
   CoinGeckoTokenId,
   MarketApiService,
@@ -157,6 +157,7 @@ export class Web3Service {
 
   public async executeTradeWithRetries(
     params: ExecuteTradeParams,
+    txRequestParams: TransactionRequest = {}
   ): Promise<TransactionReceipt> {
     const retriesCount = 3;
     for (let i = 0; i < retriesCount; i++) {
@@ -165,19 +166,16 @@ export class Web3Service {
         // this.logger.log(
         //   `Start trade attempt ${i + 1} / ${retriesCount}, nonce: ${nonce}`,
         // );
-        const estimatedGasLimit = await this.rhoSDK.executeTradeEstimateGas(
-          params,
-        );
         return await this.rhoSDK.executeTrade(params, {
+          ...txRequestParams,
           nonce,
-          gasLimit: estimatedGasLimit,
         });
       } catch (e) {
         this.logger.warn(
           `Execute trade failed (attempt: ${i + 1} / ${retriesCount})`,
           e,
         );
-        await sleep(10000);
+        await sleep(5000);
       }
     }
   }

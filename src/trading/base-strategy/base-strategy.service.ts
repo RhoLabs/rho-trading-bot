@@ -18,6 +18,7 @@ import {
   sleep,
   toBigInt,
 } from '../../utils';
+import { TransactionRequest } from 'ethers';
 
 interface CurrentMarketState {
   dv01: bigint;
@@ -354,6 +355,16 @@ export class BaseStrategyService {
         );
         await sleep(4000)
       }
+    }
+
+    const txRequestParams: TransactionRequest = {}
+    if(this.configService.get('network') !== 'mainnet') {
+      let gasLimit = await this.web3Service.rhoSDK.executeTradeEstimateGas(
+        tradeParams,
+      );
+      // Add 15% more gas on Testnet
+      gasLimit += (gasLimit * 15n) / 100n
+      txRequestParams.gasLimit = gasLimit
     }
 
     const txReceipt = await this.web3Service.executeTradeWithRetries(tradeParams)
