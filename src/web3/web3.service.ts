@@ -5,8 +5,14 @@ import {
   CoinGeckoTokenId,
   MarketApiService,
 } from '../marketapi/marketapi.service';
-import { fromBigInt, profitAndLossTotal } from '../utils';
-import RhoSDK, { MarketInfo, RhoSDKParams, SubgraphAPI } from "@rholabs/rho-sdk";
+import { fromBigInt, profitAndLossTotal, sleep } from '../utils';
+import RhoSDK, {
+  ExecuteTradeParams,
+  MarketInfo,
+  RhoSDKParams,
+  SubgraphAPI,
+} from '@rholabs/rho-sdk';
+import { TransactionReceipt } from '@rholabs/rho-sdk/node_modules/ethers';
 
 @Injectable()
 export class Web3Service {
@@ -27,11 +33,11 @@ export class Web3Service {
     const sdkParams: RhoSDKParams = {
       privateKey: configService.get('privateKey'),
       network: configService.get('networkType'),
-    }
+    };
 
-    const rpcURL = configService.get('rpcUrl')
-    if(rpcURL) {
-      sdkParams.rpcUrl = rpcURL
+    const rpcURL = configService.get('rpcUrl');
+    if (rpcURL) {
+      sdkParams.rpcUrl = rpcURL;
     }
 
     this.rhoSDK = new RhoSDK(sdkParams);
@@ -98,24 +104,6 @@ export class Web3Service {
           );
           process.exit(1);
         }
-
-        // if (accountBalance !== allowance) {
-        //   this.logger.log(
-        //     `Updating allowance ${underlyingName} (${underlying})...`,
-        //   );
-        //   const receipt = await this.rhoSDK.setAllowance(
-        //     market.descriptor.underlying,
-        //     spenderAddress,
-        //     accountBalance,
-        //   );
-        //   this.logger.log(
-        //     `Updated allowance = ${accountBalance}, ${underlyingName} (${underlying}), txnHash: ${receipt.hash}`,
-        //   );
-        // } else {
-        //   this.logger.log(
-        //     `Allowance ${underlyingName} (${underlying}): no need to update`,
-        //   );
-        // }
       } catch (e) {
         this.logger.error(
           `Cannot set allowance: ${(e as Error).message}, exit`,
@@ -165,5 +153,32 @@ export class Web3Service {
       0n,
     );
     return trades.length > 0 ? tradeRateSum / BigInt(trades.length) : 0n;
+  }
+
+  public async executeTradeWithRetries(
+    params: ExecuteTradeParams,
+  ): Promise<TransactionReceipt> {
+    const retriesCount = 3;
+    for (let i = 0; i < retriesCount; i++) {
+      try {
+        const nonce = await this.rhoSDK.getNonce();
+        // this.logger.log(
+        //   `Start trade attempt ${i + 1} / ${retriesCount}, nonce: ${nonce}`,
+        // );
+        const estimatedGasLimit = await this.rhoSDK.executeTradeEstimateGas(
+          params,
+        );
+        return await this.rhoSDK.executeTrade(params, {
+          nonce,
+          gasLimit: estimatedGasLimit,
+        });
+      } catch (e) {
+        this.logger.warn(
+          `Execute trade failed (attempt: ${i + 1} / ${retriesCount})`,
+          e,
+        );
+        await sleep(10000);
+      }
+    }
   }
 }

@@ -1,13 +1,9 @@
 export default () => ({
   privateKey: process.env.PRIVATE_KEY || '',
   networkType: process.env.NETWORK_TYPE || 'testnet',
+  strategy: process.env.STRATEGY_TYPE || 'base',
   subgraphApiUrl: process.env.SUBGRAPH_API_URL || '',
   rpcUrl: process.env.RPC_URL || '',
-  // oracleUrl: process.env.ORACLE_URL || 'https://testnet.roaracle.app',
-  // routerContractAddress: process.env.ROUTER_CONTRACT_ADDRESS || '',
-  // viewContractAddress: process.env.VIEW_CONTRACT_ADDRESS || '',
-  // quoterContractAddress: process.env.QUOTER_CONTRACT_ADDRESS || '',
-  // txConfirmations: parseInt(process.env.TX_CONFIRMATIONS || '2'),
   marketIds: (process.env.MARKET_IDS || '')
     .split(',')
     .filter((_) => _)
