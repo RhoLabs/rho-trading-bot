@@ -67,7 +67,12 @@ export class BaseStrategyService {
 
   private async scheduleTrade(market: MarketInfo, future: FutureInfo) {
     const avgInterval = this.configService.get('trading.avgInterval');
-    await this.initiateTrade(market, future);
+
+    try {
+      await this.initiateTrade(market, future);
+    } catch (e) {
+      this.logger.error('Trade failed!', e)
+    }
 
     const nextTradingTimeout = getRandomArbitrary(
       Math.round(avgInterval / 2), Math.round(avgInterval * 2)
@@ -230,15 +235,31 @@ export class BaseStrategyService {
       maxTradeSize,
       Math.min(100, maxTradeSize / 100),
     );
-    const notional = toBigInt(randomValue, underlyingDecimals);
-    this.logger.log(`Calculate trade params: maxTradeSize: ${toBigInt(maxTradeSize, underlyingDecimals)}, notional: ${notional}`)
+    // this.logger.log(`Calculate trade params: maxTradeSize: ${toBigInt(maxTradeSize, underlyingDecimals)}, notional: ${notional}`)
 
-    const tradeQuote = await this.web3Service.rhoSDK.getTradeQuote({
-      marketId: market.descriptor.id,
-      futureId: future.id,
-      notional,
-      userAddress: this.web3Service.rhoSDK.signerAddress,
-    });
+    let notional = toBigInt(randomValue, underlyingDecimals);
+    let tradeQuote: TradeQuote
+
+    // Check trade quote. If exceeded rate impact limit, reduce notional value.
+    for(let i = 0; i < 10; i++) {
+      tradeQuote = await this.web3Service.rhoSDK.getTradeQuote({
+        marketId: market.descriptor.id,
+        futureId: future.id,
+        notional,
+        userAddress: this.web3Service.rhoSDK.signerAddress,
+      });
+
+      if(
+        !tradeQuote.exceededRateImpactLimitForReceiver
+        && !tradeQuote.exceededRateImpactLimitForPayer
+      ) {
+        this.logger.log(`Trade quote success! Notional: ${notional}, futureId: ${futureId}`)
+        break
+      } else {
+        notional -= (notional * 30n) / 100n
+        this.logger.log(`Trade quote failed! Reduce notional by 30%: ${notional}...`)
+      }
+    }
 
     const marketState = await this.web3Service.getCurrentMarketState(
       future,
@@ -323,11 +344,11 @@ export class BaseStrategyService {
         tradeParams,
       );
       // Add 15% more gas on Testnet
-      gasLimit += (gasLimit * 15n) / 100n
+      gasLimit += (gasLimit * 10n) / 100n
       txRequestParams.gasLimit = gasLimit
     }
 
-    const txReceipt = await this.web3Service.executeTradeWithRetries(tradeParams)
+    const txReceipt = await this.web3Service.executeTradeWithRetries(tradeParams, txRequestParams)
     if(txReceipt) {
       this.logger.log(`Trade was successful! tx hash: ${txReceipt.hash}`);
     }
