@@ -322,7 +322,7 @@ export class BaseStrategyService {
       );
 
       if(allowance < tradeParams.depositAmount) {
-        let approvalAmount = 10000n * 10n ** underlyingDecimals
+        let approvalAmount = 1000000n * 10n ** underlyingDecimals
         this.logger.log(
           `Increasing the allowance ${market.descriptor.underlying} ${approvalAmount}`,
         );
