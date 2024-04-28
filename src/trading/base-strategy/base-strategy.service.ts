@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Web3Service } from '../../web3/web3.service';
+import { CurrentMarketState, Web3Service } from '../../web3/web3.service';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import moment from 'moment';
 import {
@@ -10,6 +10,7 @@ import {
   MarketPortfolio,
   RiskDirection,
   TradeQuote,
+  RhoSDKNetwork
 } from '@rholabs/rho-sdk';
 import {
   fromBigInt,
@@ -19,13 +20,7 @@ import {
   toBigInt,
 } from '../../utils';
 import { TransactionRequest } from 'ethers';
-
-interface CurrentMarketState {
-  dv01: bigint;
-  marketRate: bigint;
-  riskDirection: RiskDirection | null;
-  avgRate: bigint;
-}
+import { ConfigurationService } from '../../configuration/configuration.service';
 
 @Injectable()
 export class BaseStrategyService {
@@ -35,11 +30,12 @@ export class BaseStrategyService {
     private configService: ConfigService,
     private web3Service: Web3Service,
     private schedulerRegistry: SchedulerRegistry,
+    private configurationService: ConfigurationService
   ) {}
 
   async start() {
-    const configMarketIds = this.configService.get('marketIds') as string[];
-    const configFutureIds = this.configService.get('futureIds') as string[];
+    const configMarketIds = this.configurationService.getMarketIds()
+    const configFutureIds = this.configurationService.getFutureIds();
 
     let markets = await this.web3Service.rhoSDK.getActiveMarkets();
     markets = markets.filter((item) =>
@@ -87,42 +83,6 @@ export class BaseStrategyService {
     this.schedulerRegistry.addTimeout(timeoutName, timeout);
 
     this.logger.log(`Next trade attempt at ${moment(nextTradeTimestamp).format('HH:mm:ss')}, in ${nextTradingTimeout} seconds (${moment.utc(nextTradingTimeout*1000).format('HH:mm:ss')})`);
-  }
-
-  async getCurrentMarketState(
-    future: FutureInfo,
-    portfolio: MarketPortfolio,
-    tradeQuote: TradeQuote,
-  ) {
-    const { id: futureId } = future;
-
-    const futureOpenPositions = portfolio.futureOpenPositions.filter(
-      (pos) => pos.futureId === futureId,
-    );
-    const dv01 = futureOpenPositions.reduce((acc, item) => acc + item.dv01, 0n);
-    let floatTokenSum = 0n;
-    if (portfolio) {
-      floatTokenSum = futureOpenPositions.reduce(
-        (acc, nextItem) => acc + nextItem.tokensPair.floatTokenAmount,
-        0n,
-      );
-    }
-    const riskDirection =
-      floatTokenSum === 0n
-        ? null
-        : floatTokenSum < 0
-          ? RiskDirection.RECEIVER
-          : RiskDirection.PAYER;
-
-    const avgRate = await this.web3Service.getAvgTradeRate();
-
-    const marketState: CurrentMarketState = {
-      dv01,
-      marketRate: tradeQuote.receiverQuote.tradeInfo.marketRateBefore,
-      riskDirection,
-      avgRate,
-    };
-    return marketState;
   }
 
   getTradeDirection(
@@ -280,7 +240,7 @@ export class BaseStrategyService {
       userAddress: this.web3Service.rhoSDK.signerAddress,
     });
 
-    const marketState = await this.getCurrentMarketState(
+    const marketState = await this.web3Service.getCurrentMarketState(
       future,
       portfolio,
       tradeQuote,
@@ -358,7 +318,7 @@ export class BaseStrategyService {
     }
 
     const txRequestParams: TransactionRequest = {}
-    if(this.configService.get('network') !== 'mainnet') {
+    if(this.configService.get<RhoSDKNetwork>('networkType', 'testnet') === 'testnet') {
       let gasLimit = await this.web3Service.rhoSDK.executeTradeEstimateGas(
         tradeParams,
       );

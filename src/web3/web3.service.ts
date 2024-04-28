@@ -8,17 +8,26 @@ import {
 import { fromBigInt, profitAndLossTotal, sleep } from '../utils';
 import RhoSDK, {
   ExecuteTradeParams,
+  FutureInfo,
   MarketInfo,
+  MarketPortfolio,
   RhoSDKParams,
-  SubgraphAPI,
+  RiskDirection,
+  TradeQuote,
 } from '@rholabs/rho-sdk';
 import { TransactionReceipt } from '@rholabs/rho-sdk/node_modules/ethers';
+
+export interface CurrentMarketState {
+  dv01: bigint;
+  marketRate: bigint;
+  riskDirection: RiskDirection | null;
+  avgRate: bigint;
+}
 
 @Injectable()
 export class Web3Service {
   private readonly logger = new Logger(Web3Service.name);
   public rhoSDK: RhoSDK;
-  public subgraphAPI: SubgraphAPI;
 
   constructor(
     private readonly configService: ConfigService,
@@ -41,10 +50,6 @@ export class Web3Service {
     }
 
     this.rhoSDK = new RhoSDK(sdkParams);
-
-    this.subgraphAPI = new SubgraphAPI({
-      apiUrl: configService.get('subgraphApiUrl'),
-    });
 
     this.logger.log(`Bot account address: ${this.rhoSDK.signerAddress}`);
   }
@@ -143,16 +148,52 @@ export class Web3Service {
     return await this.rhoSDK.getBalance(this.rhoSDK.signerAddress);
   }
 
-  async getAvgTradeRate() {
-    const trades = await this.subgraphAPI.getTrades({
-      futureIds: [...this.configService.get('futureIds')],
-      limit: 10,
+  async getAvgTradeRate(marketId: string) {
+    const trades = await this.rhoSDK.dataServiceAPI.getTrades({
+      marketId,
+      count: 50
     });
     const tradeRateSum = trades.reduce(
-      (acc, trade) => acc + trade.tradeRate,
+      (acc, trade) => acc + BigInt(trade.rate),
       0n,
     );
     return trades.length > 0 ? tradeRateSum / BigInt(trades.length) : 0n;
+  }
+
+  async getCurrentMarketState(
+    future: FutureInfo,
+    portfolio: MarketPortfolio,
+    tradeQuote: TradeQuote,
+  ) {
+    const { id: futureId } = future;
+
+    const futureOpenPositions = portfolio.futureOpenPositions.filter(
+      (pos) => pos.futureId === futureId,
+    );
+    const dv01 = futureOpenPositions.reduce((acc, item) => acc + item.dv01, 0n);
+    let floatTokenSum = 0n;
+    if (portfolio) {
+      floatTokenSum = futureOpenPositions.reduce(
+        (acc, nextItem) => acc + nextItem.tokensPair.floatTokenAmount,
+        0n,
+      );
+    }
+    const riskDirection =
+      floatTokenSum === 0n
+        ? null
+        : floatTokenSum < 0
+          ? RiskDirection.RECEIVER
+          : RiskDirection.PAYER;
+
+    const avgRate = await this.getAvgTradeRate(future.marketId);
+
+    const marketState: CurrentMarketState = {
+      dv01,
+      marketRate: tradeQuote.receiverQuote.tradeInfo.marketRateBefore,
+      riskDirection,
+      avgRate,
+    };
+    return marketState;
   }
 
   public async executeTradeWithRetries(
