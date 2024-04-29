@@ -13,7 +13,7 @@ export default () => ({
       .filter((_) => _)
       .map((item) => item.trim().toLowerCase()),
     // Average interval between trade attempts [seconds]
-    avgInterval: Math.max(Number(process.env.TRADE_AVERAGE_INTERVAL || '600'), 600),
+    avgInterval: Number(process.env.TRADE_AVERAGE_INTERVAL || '600'),
     maxRisk: Number(process.env.TRADE_MAX_RISK || '10000'),
     // Max notional value [USDT]
     maxTradeSize: Number(process.env.TRADE_MAX_SIZE || '1000'),
