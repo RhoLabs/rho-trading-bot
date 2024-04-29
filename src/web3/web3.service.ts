@@ -160,11 +160,10 @@ export class Web3Service {
     return trades.length > 0 ? tradeRateSum / BigInt(trades.length) : 0n;
   }
 
-  async getCurrentMarketState(
+  async getMarketState(
     future: FutureInfo,
     portfolio: MarketPortfolio,
-    tradeQuote: TradeQuote,
-  ) {
+  ): Promise<CurrentMarketState> {
     const { id: futureId } = future;
 
     const futureOpenPositions = portfolio.futureOpenPositions.filter(
@@ -186,14 +185,21 @@ export class Web3Service {
           : RiskDirection.PAYER;
 
     const avgRate = await this.getAvgTradeRate(future.marketId);
+    const markets = await this.rhoSDK.getActiveMarkets()
+    const marketRate = markets.reduce((value, item) => {
+      const futureItem = item.futures.find(futureItem => futureItem.id === futureId)
+      if(futureItem) {
+        value = futureItem.vAMMParams.currentFutureRate
+      }
+      return value
+    }, 0n)
 
-    const marketState: CurrentMarketState = {
+    return {
       dv01,
-      marketRate: tradeQuote.receiverQuote.tradeInfo.marketRateBefore,
+      marketRate,
       riskDirection,
       avgRate,
     };
-    return marketState;
   }
 
   public async executeTradeWithRetries(

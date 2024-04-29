@@ -31,6 +31,10 @@ export class ConfigurationService {
     return this.configService.get(key) as BotConfig[T];
   }
 
+  getNetworkType() {
+    return this.configService.get<RhoSDKNetwork>('networkType')
+  }
+
   getStrategy(): BotStrategy {
     const configStrategy = this.configService.get('strategy')
     if(Object.values(BotStrategy).includes(configStrategy)) {

@@ -261,10 +261,9 @@ export class BaseStrategyService {
       }
     }
 
-    const marketState = await this.web3Service.getCurrentMarketState(
+    const marketState = await this.web3Service.getMarketState(
       future,
       portfolio,
-      tradeQuote,
     );
     const tradeDirection = this.getTradeDirection(market, future, marketState);
 
@@ -339,12 +338,12 @@ export class BaseStrategyService {
     }
 
     const txRequestParams: TransactionRequest = {}
-    if(this.configService.get<RhoSDKNetwork>('networkType', 'testnet') === 'testnet') {
+    if(this.configurationService.getNetworkType() === 'testnet') {
       let gasLimit = await this.web3Service.rhoSDK.executeTradeEstimateGas(
         tradeParams,
       );
-      // Add 15% more gas on Testnet
-      gasLimit += (gasLimit * 10n) / 100n
+      // Add 5% more gas on Testnet
+      gasLimit += (gasLimit * 5n) / 100n
       txRequestParams.gasLimit = gasLimit
     }
 
