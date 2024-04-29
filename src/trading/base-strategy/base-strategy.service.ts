@@ -331,10 +331,10 @@ export class BaseStrategyService {
           this.web3Service.rhoSDK.config.routerAddress,
           approvalAmount,
         );
+        await this.web3Service.rhoSDK.provider.waitForTransaction(approvalReceipt.hash)
         this.logger.log(
           `Approval was successful! txnHash: ${approvalReceipt.hash}`,
         );
-        await sleep(4000)
       }
     }
 
