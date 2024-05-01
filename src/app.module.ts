@@ -4,10 +4,10 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { Web3Service } from './web3/web3.service';
-import { MarketApiService } from './marketapi/marketapi.service';
-import { MetricsService } from './metrics/metrics.service';
+import { TradingModule } from './trading/trading.module';
 import configuration from './config';
+import { BaseStrategyService } from './trading/base-strategy/base-strategy.service';
+import { ConfigurationService } from './configuration/configuration.service';
 
 @Module({
   imports: [
@@ -16,13 +16,12 @@ import configuration from './config';
     ConfigModule.forRoot({
       load: [configuration],
     }),
+    TradingModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    Web3Service,
-    MarketApiService,
-    MetricsService,
+    ConfigurationService,
   ],
 })
 export class AppModule {}

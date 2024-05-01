@@ -29,10 +29,6 @@ export const profitAndLossTotal = (input: ProfitAndLoss) => {
   return input.accruedLPFee + input.netFutureValue - input.incurredFee;
 };
 
-export const marginTotal = (input: Margin) => {
-  return input.collateral + profitAndLossTotal(input.profitAndLoss);
-};
-
 export const getMax = (...values) => {
   if (values.length < 1) {
     return -Infinity;
@@ -57,3 +53,7 @@ export const getDV01FromNotional = (
 ) => {
   return (notionalValue * 0.0001 * secondsToExpiry) / secondsInYear;
 };
+
+export const sleep = (timeout: number) => {
+  return new Promise((resolve) => setTimeout(resolve, timeout));
+}

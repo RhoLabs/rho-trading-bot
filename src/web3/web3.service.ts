@@ -1,18 +1,33 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { formatEther, formatUnits } from 'ethers';
+import { formatEther, formatUnits, TransactionRequest } from 'ethers';
 import {
   CoinGeckoTokenId,
   MarketApiService,
 } from '../marketapi/marketapi.service';
-import { fromBigInt, profitAndLossTotal } from '../utils';
-import RhoSDK, { MarketInfo, RhoSDKParams, SubgraphAPI } from "@rholabs/rho-sdk";
+import { fromBigInt, profitAndLossTotal, sleep } from '../utils';
+import RhoSDK, {
+  ExecuteTradeParams,
+  FutureInfo,
+  MarketInfo,
+  MarketPortfolio,
+  RhoSDKParams,
+  RiskDirection,
+  TradeQuote,
+} from '@rholabs/rho-sdk';
+import { TransactionReceipt } from '@rholabs/rho-sdk/node_modules/ethers';
+
+export interface CurrentMarketState {
+  dv01: bigint;
+  marketRate: bigint;
+  riskDirection: RiskDirection | null;
+  avgRate: bigint;
+}
 
 @Injectable()
 export class Web3Service {
   private readonly logger = new Logger(Web3Service.name);
   public rhoSDK: RhoSDK;
-  public subgraphAPI: SubgraphAPI;
 
   constructor(
     private readonly configService: ConfigService,
@@ -27,18 +42,14 @@ export class Web3Service {
     const sdkParams: RhoSDKParams = {
       privateKey: configService.get('privateKey'),
       network: configService.get('networkType'),
-    }
+    };
 
-    const rpcURL = configService.get('rpcUrl')
-    if(rpcURL) {
-      sdkParams.rpcUrl = rpcURL
+    const rpcURL = configService.get('rpcUrl');
+    if (rpcURL) {
+      sdkParams.rpcUrl = rpcURL;
     }
 
     this.rhoSDK = new RhoSDK(sdkParams);
-
-    this.subgraphAPI = new SubgraphAPI({
-      apiUrl: configService.get('subgraphApiUrl'),
-    });
 
     this.logger.log(`Bot account address: ${this.rhoSDK.signerAddress}`);
   }
@@ -98,24 +109,6 @@ export class Web3Service {
           );
           process.exit(1);
         }
-
-        // if (accountBalance !== allowance) {
-        //   this.logger.log(
-        //     `Updating allowance ${underlyingName} (${underlying})...`,
-        //   );
-        //   const receipt = await this.rhoSDK.setAllowance(
-        //     market.descriptor.underlying,
-        //     spenderAddress,
-        //     accountBalance,
-        //   );
-        //   this.logger.log(
-        //     `Updated allowance = ${accountBalance}, ${underlyingName} (${underlying}), txnHash: ${receipt.hash}`,
-        //   );
-        // } else {
-        //   this.logger.log(
-        //     `Allowance ${underlyingName} (${underlying}): no need to update`,
-        //   );
-        // }
       } catch (e) {
         this.logger.error(
           `Cannot set allowance: ${(e as Error).message}, exit`,
@@ -155,15 +148,82 @@ export class Web3Service {
     return await this.rhoSDK.getBalance(this.rhoSDK.signerAddress);
   }
 
-  async getAvgTradeRate() {
-    const trades = await this.subgraphAPI.getTrades({
-      futureIds: [...this.configService.get('futureIds')],
-      limit: 10,
+  async getAvgTradeRate(marketId: string) {
+    const trades = await this.rhoSDK.dataServiceAPI.getTrades({
+      marketId,
+      count: 50
     });
     const tradeRateSum = trades.reduce(
-      (acc, trade) => acc + trade.tradeRate,
+      (acc, trade) => acc + BigInt(trade.rate),
       0n,
     );
     return trades.length > 0 ? tradeRateSum / BigInt(trades.length) : 0n;
+  }
+
+  async getMarketState(
+    future: FutureInfo,
+    portfolio: MarketPortfolio,
+  ): Promise<CurrentMarketState> {
+    const { id: futureId } = future;
+
+    const futureOpenPositions = portfolio.futureOpenPositions.filter(
+      (pos) => pos.futureId === futureId,
+    );
+    const dv01 = futureOpenPositions.reduce((acc, item) => acc + item.dv01, 0n);
+    let floatTokenSum = 0n;
+    if (portfolio) {
+      floatTokenSum = futureOpenPositions.reduce(
+        (acc, nextItem) => acc + nextItem.tokensPair.floatTokenAmount,
+        0n,
+      );
+    }
+    const riskDirection =
+      floatTokenSum === 0n
+        ? null
+        : floatTokenSum < 0
+          ? RiskDirection.RECEIVER
+          : RiskDirection.PAYER;
+
+    const avgRate = await this.getAvgTradeRate(future.marketId);
+    const markets = await this.rhoSDK.getActiveMarkets()
+    const marketRate = markets.reduce((value, item) => {
+      const futureItem = item.futures.find(futureItem => futureItem.id === futureId)
+      if(futureItem) {
+        value = futureItem.vAMMParams.currentFutureRate
+      }
+      return value
+    }, 0n)
+
+    return {
+      dv01,
+      marketRate,
+      riskDirection,
+      avgRate,
+    };
+  }
+
+  public async executeTradeWithRetries(
+    params: ExecuteTradeParams,
+    txRequestParams: TransactionRequest = {}
+  ): Promise<TransactionReceipt> {
+    const retriesCount = 3;
+    for (let i = 0; i < retriesCount; i++) {
+      try {
+        const nonce = await this.rhoSDK.getNonce();
+        // this.logger.log(
+        //   `Start trade attempt ${i + 1} / ${retriesCount}, nonce: ${nonce}`,
+        // );
+        return await this.rhoSDK.executeTrade(params, {
+          ...txRequestParams,
+          nonce,
+        });
+      } catch (e) {
+        this.logger.warn(
+          `Execute trade failed (attempt: ${i + 1} / ${retriesCount})`,
+          e,
+        );
+        await sleep(5000);
+      }
+    }
   }
 }
