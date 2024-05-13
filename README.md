@@ -40,3 +40,10 @@ NestJS will generate new service and add it to Trading module.
 
 2. Go to `src/trading/advanced-strategy/advanced-strategy.service.ts` and implement custom strategy. You can use `src/trading/base-strategy/base-strategy.service.ts` as an example.
 3. Add specific code for launching new strategy in AppService (`src/app.service.ts`)
+
+## Publishing to Docker Hub
+```shell
+docker buildx build -t rholabs/trading-bot:1.3.2  --platform linux/amd64 .
+
+docker push rholabs/trading-bot:1.3.2
+```
