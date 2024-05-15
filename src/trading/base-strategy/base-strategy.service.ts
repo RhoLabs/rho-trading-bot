@@ -250,8 +250,12 @@ export class BaseStrategyService {
       });
 
       if(
-        !tradeQuote.exceededRateImpactLimitForReceiver
-        && !tradeQuote.exceededRateImpactLimitForPayer
+        !tradeQuote.exceededTradeRateImpactLimitForPayer
+        && !tradeQuote.exceededTradeRateImpactLimitForReceiver
+        && !tradeQuote.exceededTradeNotionalLimitForPayer
+        && !tradeQuote.exceededTradeNotionalLimitForReceiver
+        && !tradeQuote.exceededMarketRateImpactLimitForPayer
+        && !tradeQuote.exceededMarketRateImpactLimitForReceiver
       ) {
         this.logger.log(`Trade quote success! Notional: ${notional}, futureId: ${futureId}`)
         break
