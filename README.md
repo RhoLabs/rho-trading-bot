@@ -1,3 +1,5 @@
+![image](https://github.com/RhoLabs/rho-trading-bot/assets/8803471/fb47f21d-badc-4b8c-8be5-a47797c04138)
+
 ### Rho Trading Bot
 
 ## Environment variables
