@@ -35,6 +35,10 @@ export class ConfigurationService {
     return this.configService.get<RhoSDKNetwork>('networkType')
   }
 
+  getRPCUrl() {
+    return this.configService.get<RhoSDKNetwork>('rpcUrl')
+  }
+
   getStrategy(): BotStrategy {
     const configStrategy = this.configService.get('strategy')
     if(Object.values(BotStrategy).includes(configStrategy)) {
@@ -50,5 +54,9 @@ export class ConfigurationService {
 
   getFutureIds(): string[] {
     return this.configService.get('trading.futureIds')
+  }
+
+  getPrivateKeys(): string[] {
+    return this.configService.get('privateKey')
   }
 }

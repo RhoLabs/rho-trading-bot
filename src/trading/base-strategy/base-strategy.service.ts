@@ -7,16 +7,13 @@ import {
   FutureInfo,
   marginTotal,
   MarketInfo,
-  MarketPortfolio,
   RiskDirection,
   TradeQuote,
-  RhoSDKNetwork
 } from '@rholabs/rho-sdk';
 import {
   fromBigInt,
   generateRandom, getDV01FromNotional, getMax,
   getRandomArbitrary,
-  sleep,
   toBigInt,
 } from '../../utils';
 import { TransactionRequest } from 'ethers';
@@ -31,11 +28,18 @@ export class BaseStrategyService {
     private web3Service: Web3Service,
     private schedulerRegistry: SchedulerRegistry,
     private configurationService: ConfigurationService
-  ) {}
+  ) {
+    const privateKeys = configurationService.getPrivateKeys();
+    if (privateKeys.length === 0) {
+      this.logger.error(`No private keys found, use [PRIVATE_KEY] variable to set a list of private keys. Exit.`);
+      process.exit(1);
+    }
+  }
 
   async start() {
     const configMarketIds = this.configurationService.getMarketIds()
     const configFutureIds = this.configurationService.getFutureIds();
+    const privateKeys = this.configurationService.getPrivateKeys();
 
     let markets = await this.web3Service.rhoSDK.getActiveMarkets();
     markets = markets.filter((item) =>
@@ -47,7 +51,13 @@ export class BaseStrategyService {
     }).flat()
 
     if(this.schedulerRegistry.getTimeouts().length === 0) {
-      this.logger.log(`Init new trading tasks. Futures count: ${futures.length}.`)
+      this.logger.log(`Init new trading tasks. Bot accounts: ${
+        privateKeys.length
+      }, futures: ${
+        futures.length
+      } (${
+        futures.map(item => item.id)
+      }).`)
     }
 
     for (const future of futures) {
@@ -67,11 +77,19 @@ export class BaseStrategyService {
 
   private async scheduleTrade(market: MarketInfo, future: FutureInfo) {
     const avgInterval = this.configService.get('trading.avgInterval');
+    const privateKeys = this.configurationService.getPrivateKeys()
 
-    try {
-      await this.initiateTrade(market, future);
-    } catch (e) {
-      this.logger.error('Trade failed!', e)
+    for(let i = 0; i < privateKeys.length; i++) {
+      const privateKey = privateKeys[i]
+      try {
+        this.web3Service.rhoSDK.setPrivateKey(privateKey)
+        this.logger.log(`[${this.web3Service.rhoSDK.signerAddress}] initiate trade...`)
+        await this.initiateTrade(market, future);
+      } catch (e) {
+        this.logger.error(`[${
+          this.web3Service.rhoSDK.signerAddress
+        }] Failed to initiate trade:`, e)
+      }
     }
 
     const nextTradingTimeout = getRandomArbitrary(
@@ -87,7 +105,13 @@ export class BaseStrategyService {
     }
     this.schedulerRegistry.addTimeout(timeoutName, timeout);
 
-    this.logger.log(`Next trade attempt at ${moment(nextTradeTimestamp).format('HH:mm:ss')}, in ${nextTradingTimeout} seconds (${moment.utc(nextTradingTimeout*1000).format('HH:mm:ss')})`);
+    this.logger.log(`Next trade attempt at ${
+      moment(nextTradeTimestamp).format('HH:mm:ss')
+    }, in ${
+      nextTradingTimeout
+    } seconds (${
+      moment.utc(nextTradingTimeout * 1000).format('HH:mm:ss')
+    })`);
   }
 
   getTradeDirection(
@@ -123,9 +147,9 @@ export class BaseStrategyService {
     const yFactor = this.configService.get('trading.yFactor') / 10 ** 4;
     const zFactor = this.configService.get('trading.zFactor') / 10 ** 4;
 
-    this.logger.log(
-      `Current market state: \ndv01: ${dv01}, riskLevel: ${riskLevel}, maxRisk: ${maxRisk}, avgRate: ${avgRate}, marketRate: ${marketRate}`,
-    );
+    // this.logger.log(
+    //   `Current market state: \ndv01: ${dv01}, riskLevel: ${riskLevel}, maxRisk: ${maxRisk}, avgRate: ${avgRate}, marketRate: ${marketRate}`,
+    // );
 
     const tradePx1 = this.configService.get('trading.px1');
     const tradePy1 = 1 - tradePx1;
@@ -194,7 +218,7 @@ export class BaseStrategyService {
       pPay = 1 - pReceive;
     }
 
-    this.logger.log(`P_Receive = ${pReceive}, P_Pay = ${pPay} `);
+    // this.logger.log(`P_Receive = ${pReceive}, P_Pay = ${pPay} `);
 
     if (pReceive === 0 && pPay === 0) {
       return null;
@@ -257,11 +281,11 @@ export class BaseStrategyService {
         && !tradeQuote.exceededMarketRateImpactLimitForPayer
         && !tradeQuote.exceededMarketRateImpactLimitForReceiver
       ) {
-        this.logger.log(`Trade quote success! Notional: ${notional}, futureId: ${futureId}`)
+        // this.logger.log(`Trade quote success! Notional: ${notional}, futureId: ${futureId}`)
         break
       } else {
         notional -= (notional * 30n) / 100n
-        this.logger.log(`Trade quote failed! Reduce notional by 30%: ${notional}...`)
+        this.logger.log(`[${this.web3Service.rhoSDK.signerAddress}] Trade quote failed! Reduce notional by 30%: ${notional}...`)
       }
     }
 
@@ -307,7 +331,8 @@ export class BaseStrategyService {
     };
 
     this.logger.log(
-      `Trade attempt ` +
+      `[${this.web3Service.rhoSDK.signerAddress}]` +
+      ` Trade attempt ` +
       `${market.descriptor.sourceName} ${market.descriptor.instrumentName}, futureId: ${tradeParams.futureId}, ` +
       `riskDirection: ${tradeParams.riskDirection}, ` +
       `notional: ${tradeParams.notional}, ` +
@@ -351,9 +376,9 @@ export class BaseStrategyService {
       txRequestParams.gasLimit = gasLimit
     }
 
-    const txReceipt = await this.web3Service.executeTradeWithRetries(tradeParams, txRequestParams)
+    const txReceipt = await this.web3Service.executeTrade(tradeParams, txRequestParams)
     if(txReceipt) {
-      this.logger.log(`Trade was successful! tx hash: ${txReceipt.hash}`);
+      this.logger.log(`[${this.web3Service.rhoSDK.signerAddress}] Successful trade! tx hash: ${txReceipt.hash}`);
     }
   }
 }
