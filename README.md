@@ -22,7 +22,7 @@ npm i
 npm run start
 ```
 
-## Run from docker image
+## Run in docker container
 
 
 1. Pull docker image from the [public registry](https://hub.docker.com/r/rholabs/trading-bot)
