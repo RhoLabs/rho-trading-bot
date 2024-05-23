@@ -17,6 +17,13 @@
 | TRADE_WARNING_LOSSES   | false    | 1000    | [integer, USDT] Max warning losses per day                     |
 
 ## Run locally
+1) Prepare .env config. `.env.example` can be used as reference.
+```shell
+touch .env
+```
+**NOTE**: Bot trading account (env: `PRIVATE_KEY`) should have underlying tokens on balance to execute trades.
+
+2) Install dependencies and run the bot
 ```
 npm i
 npm run start
