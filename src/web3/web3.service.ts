@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { formatEther, formatUnits, TransactionRequest } from 'ethers';
+import { TransactionRequest, Wallet } from '@rholabs/rho-sdk/node_modules/ethers';
 import {
   MarketApiService,
 } from '../marketapi/marketapi.service';
@@ -167,18 +167,24 @@ export class Web3Service {
     };
   }
 
-  public async executeTrade(
+  public async executeTrade(data: {
     params: ExecuteTradeParams,
-    txRequestParams: TransactionRequest = {}
-  ): Promise<TransactionReceipt> {
+    txRequestParams?: TransactionRequest,
+    signer?: Wallet
+  }): Promise<TransactionReceipt> {
+    const {params, signer, txRequestParams = {}} = data
+
     const retriesCount = 3;
 
     for (let i = 0; i < retriesCount; i++) {
       try {
-        const nonce = await this.rhoSDK.getNonce();
+        if(signer) {
+          this.rhoSDK.setPrivateKey(signer.privateKey)
+        }
+        // const nonce = await this.rhoSDK.getNonce();
         return await this.rhoSDK.executeTrade(params, {
           ...txRequestParams,
-          nonce,
+          // nonce,
         });
       } catch (e) {
         this.logger.warn(

@@ -10,13 +10,13 @@ import {
   RiskDirection,
   TradeQuote,
 } from '@rholabs/rho-sdk';
+import { Wallet, TransactionRequest, JsonRpcProvider, ethers } from '@rholabs/rho-sdk/node_modules/ethers'
 import {
   fromBigInt,
   generateRandom, getDV01FromNotional, getMax,
   getRandomArbitrary,
   toBigInt,
 } from '../../utils';
-import { TransactionRequest } from 'ethers';
 import { ConfigurationService } from '../../configuration/configuration.service';
 
 @Injectable()
@@ -79,16 +79,25 @@ export class BaseStrategyService {
     const avgInterval = this.configService.get('trading.avgInterval');
     const privateKeys = this.configurationService.getPrivateKeys()
 
+    // const trades = await Promise.allSettled(privateKeys.map(async (privateKey) => {
+    //     const provider = new JsonRpcProvider(this.web3Service.rhoSDK.config.rpcUrl)
+    //     const signer = new ethers.Wallet(privateKey, provider)
+    //     return await this.initiateTrade(market, future, signer);
+    // }))
+    // const completedTrades = trades.filter(item => item.status === 'fulfilled')
+
+    let completedTrades = []
     for(let i = 0; i < privateKeys.length; i++) {
       const privateKey = privateKeys[i]
+      const provider = new JsonRpcProvider(this.web3Service.rhoSDK.config.rpcUrl)
+      const signer = new ethers.Wallet(privateKey, provider)
       try {
-        this.web3Service.rhoSDK.setPrivateKey(privateKey)
-        this.logger.log(`[${this.web3Service.rhoSDK.signerAddress}] initiate trade...`)
-        await this.initiateTrade(market, future);
+        const result = await this.initiateTrade(market, future, signer);
+        completedTrades.push(result)
       } catch (e) {
         this.logger.error(`[${
-          this.web3Service.rhoSDK.signerAddress
-        }] Failed to initiate trade:`, e)
+          signer.address
+        }] Trade attempt failed:`, e)
       }
     }
 
@@ -105,7 +114,7 @@ export class BaseStrategyService {
     }
     this.schedulerRegistry.addTimeout(timeoutName, timeout);
 
-    this.logger.log(`Next trade attempt at ${
+    this.logger.log(`Completed trades: ${completedTrades.length} / ${privateKeys.length}. Next trade attempt at ${
       moment(nextTradeTimestamp).format('HH:mm:ss')
     }, in ${
       nextTradingTimeout
@@ -234,12 +243,16 @@ export class BaseStrategyService {
   async initiateTrade(
     market: MarketInfo,
     future: FutureInfo,
+    signer: Wallet
   ) {
+    this.logger.log(`[${signer.address}] initiate trade...`)
     const {
       id: marketId,
       underlying,
       underlyingDecimals,
     } = market.descriptor;
+
+    const signerAddress = signer.address
 
     const { id: futureId } = future;
 
@@ -251,7 +264,7 @@ export class BaseStrategyService {
 
     const portfolio = await this.web3Service.rhoSDK.getMarketPortfolio({
       marketId: market.descriptor.id,
-      userAddress: this.web3Service.rhoSDK.signerAddress,
+      userAddress: signerAddress,
     });
 
     const randomValue = generateRandom(
@@ -270,7 +283,7 @@ export class BaseStrategyService {
         marketId: market.descriptor.id,
         futureId: future.id,
         notional,
-        userAddress: this.web3Service.rhoSDK.signerAddress,
+        userAddress: signer.address,
       });
 
       if(
@@ -285,7 +298,7 @@ export class BaseStrategyService {
         break
       } else {
         notional -= (notional * 30n) / 100n
-        this.logger.log(`[${this.web3Service.rhoSDK.signerAddress}] Trade quote failed! Reduce notional by 30%: ${notional}...`)
+        this.logger.log(`[${signer.address}] Trade quote failed! Reduce notional by 30%: ${notional}...`)
       }
     }
 
@@ -297,7 +310,7 @@ export class BaseStrategyService {
 
     if (tradeDirection === null) {
       this.logger.warn(`Trade direction is null, skip trading`);
-      return false;
+      return;
     }
 
     const currentMargin = marginTotal(portfolio.marginState.margin);
@@ -305,7 +318,7 @@ export class BaseStrategyService {
       this.logger.warn(
         `Current margin: ${currentMargin}, maxMarginInUse: ${maxMarginInUse}, skip this trading attempt`,
       );
-      return false;
+      return;
     }
 
     const selectedQuote =
@@ -331,7 +344,7 @@ export class BaseStrategyService {
     };
 
     this.logger.log(
-      `[${this.web3Service.rhoSDK.signerAddress}]` +
+      `[${signer.address}]` +
       ` Trade attempt ` +
       `${market.descriptor.sourceName} ${market.descriptor.instrumentName}, futureId: ${tradeParams.futureId}, ` +
       `riskDirection: ${tradeParams.riskDirection}, ` +
@@ -345,14 +358,14 @@ export class BaseStrategyService {
       const spenderAddress = this.web3Service.rhoSDK.config.routerAddress;
       const allowance = await this.web3Service.rhoSDK.getAllowance(
         underlying,
-        this.web3Service.rhoSDK.signerAddress,
+        signer.address,
         spenderAddress,
       );
 
       if(allowance < tradeParams.depositAmount) {
         let approvalAmount = 1000000n * 10n ** underlyingDecimals
         this.logger.log(
-          `Increasing the allowance ${market.descriptor.underlying} ${approvalAmount}`,
+          `[${signer.address}] Increasing the allowance ${market.descriptor.underlying} ${approvalAmount}`,
         );
         const approvalReceipt = await this.web3Service.rhoSDK.setAllowance(
           market.descriptor.underlying,
@@ -361,13 +374,17 @@ export class BaseStrategyService {
         );
         await this.web3Service.rhoSDK.provider.waitForTransaction(approvalReceipt.hash)
         this.logger.log(
-          `Approval was successful! txnHash: ${approvalReceipt.hash}`,
+          `[${signerAddress}] Approval was successful! txnHash: ${approvalReceipt.hash}`,
         );
       }
     }
 
     const txRequestParams: TransactionRequest = {}
+
     if(this.configurationService.getNetworkType() === 'testnet') {
+      if(signer) {
+        this.web3Service.rhoSDK.setPrivateKey(signer.privateKey)
+      }
       let gasLimit = await this.web3Service.rhoSDK.executeTradeEstimateGas(
         tradeParams,
       );
@@ -376,9 +393,14 @@ export class BaseStrategyService {
       txRequestParams.gasLimit = gasLimit
     }
 
-    const txReceipt = await this.web3Service.executeTrade(tradeParams, txRequestParams)
+    const txReceipt = await this.web3Service.executeTrade({
+      params: tradeParams,
+      txRequestParams,
+      signer
+    })
     if(txReceipt) {
-      this.logger.log(`[${this.web3Service.rhoSDK.signerAddress}] Successful trade! tx hash: ${txReceipt.hash}`);
+      this.logger.log(`[${signerAddress}] Successful trade! tx hash: ${txReceipt.hash}`);
     }
+    return txReceipt
   }
 }
