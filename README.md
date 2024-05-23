@@ -45,7 +45,7 @@ NestJS will generate new service and add it to Trading module.
 
 ## Publishing to Docker Hub
 ```shell
-docker buildx build -t rholabs/trading-bot:1.3.2  --platform linux/amd64 .
+docker buildx build -t rholabs/trading-bot:1.4.0  --platform linux/amd64 .
 
-docker push rholabs/trading-bot:1.3.2
+docker push rholabs/trading-bot:1.4.0
 ```
