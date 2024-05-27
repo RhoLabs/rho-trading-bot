@@ -367,6 +367,7 @@ export class BaseStrategyService {
         this.logger.log(
           `[${signer.address}] Increasing the allowance ${market.descriptor.underlying} ${approvalAmount}`,
         );
+        this.web3Service.rhoSDK.setSigner(signer)
         const approvalReceipt = await this.web3Service.rhoSDK.setAllowance(
           market.descriptor.underlying,
           this.web3Service.rhoSDK.config.routerAddress,
