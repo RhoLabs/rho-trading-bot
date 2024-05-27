@@ -31,16 +31,24 @@ npm run start
 
 1. Pull docker image from the [public registry](https://hub.docker.com/r/rholabs/trading-bot)
 ```sh
-docker pull rholabs/trading-bot:1.4.0
+docker pull rholabs/trading-bot:1.5.1
 ```
 
 2. Create .env file with list or environment variables. `.env.example` can be used as reference.
+```shell
+PRIVATE_KEY=0x123
+NETWORK_TYPE=testnet
+MARKET_IDS=0x123
+FUTURE_IDS=0x456
+TRADE_MAX_SIZE=1000
+TRADE_AVERAGE_INTERVAL=600
+```
 
 **NOTE**: Bot trading account (env: `PRIVATE_KEY`) should have underlying tokens on balance to execute trades.
 
 3. Run bot in docker container:
 ```shell
-docker run --env-file .env rholabs/trading-bot:1.4.0
+docker run --env-file .env rholabs/trading-bot:1.5.1
 ```
 
 ## Bot strategy
