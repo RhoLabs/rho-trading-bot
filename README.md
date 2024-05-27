@@ -3,18 +3,18 @@
 ### Rho Trading Bot
 
 ## Environment variables
-| Env variable name      | Required | Default | Description                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                
-|------------------------|----------|---------|----------------------------------------------------------------|
-| PRIVATE_KEY            | true     | -       | Bot account private key to sign a transactions                 |
-| STRATEGY_TYPE          | false    | default | Bot strategy type                                              |
-| NETWORK_TYPE           | false    | testnet | mainnet / testnet                                              |
-| RPC_URL                | true     | -       | RPC URL                                                        |
-| MARKET_IDS             | false    | -       | List of market ids, divided by comma, for example: 0x123,0x567 |
-| FUTURE_IDS             | false    | -       | List of future ids, divided by comma, for example: 0x123,0x567 |
-| TRADE_AVERAGE_INTERVAL | false    | 30      | [seconds] Average interval between trades                      |
-| TRADE_MAX_RISK         | false    | 1       | [Integer] Used in trading rules to compare against dv01        |
-| TRADE_MAX_SIZE         | false    | 1000    | [integer, USDT] Max notional amount                            |
-| TRADE_WARNING_LOSSES   | false    | 1000    | [integer, USDT] Max warning losses per day                     |
+| Env variable name      | Required | Default | Description                                                                                                          |                                                                                                                                                                                                                                                                                                                                                                                                                                                
+|------------------------|----------|---------|----------------------------------------------------------------------------------------------------------------------|
+| PRIVATE_KEY            | true     | -       | Bot account private key to sign a transactions. Use comma separated values for multiple accounts: 0x123,0x456,0x789. |
+| STRATEGY_TYPE          | false    | default | Bot strategy type                                                                                                    |
+| NETWORK_TYPE           | false    | testnet | mainnet / testnet                                                                                                    |
+| RPC_URL                | true     | -       | RPC URL                                                                                                              |
+| MARKET_IDS             | false    | -       | List of market ids, divided by comma, for example: 0x123,0x567                                                       |
+| FUTURE_IDS             | false    | -       | List of future ids, divided by comma, for example: 0x123,0x567                                                       |
+| TRADE_AVERAGE_INTERVAL | false    | 30      | [seconds] Average interval between trades                                                                            |
+| TRADE_MAX_RISK         | false    | 1       | [Integer] Used in trading rules to compare against dv01                                                              |
+| TRADE_MAX_SIZE         | false    | 1000    | [integer, USDT] Max notional amount                                                                                  |
+| TRADE_WARNING_LOSSES   | false    | 1000    | [integer, USDT] Max warning losses per day                                                                           |
 
 ## Run locally
 1) Prepare .env config. `.env.example` can be used as reference.
@@ -66,6 +66,12 @@ NestJS will generate new service and add it to Trading module.
 
 2. Go to `src/trading/advanced-strategy/advanced-strategy.service.ts` and implement custom strategy. You can use `src/trading/base-strategy/base-strategy.service.ts` as an example.
 3. Add specific code for launching new strategy in AppService (`src/app.service.ts`)
+
+## Trading from multiple accounts
+Use comma separated values to trade from multiple accounts.
+```shell
+PRIVATE_KEY=0x123,0x456,0x789
+```
 
 ## Publishing to Docker Hub
 ```shell
