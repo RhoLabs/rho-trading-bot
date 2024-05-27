@@ -116,6 +116,7 @@ export class Web3Service {
   async getAvgTradeRate(marketId: string) {
     const trades = await this.rhoSDK.dataServiceAPI.getTrades({
       marketId,
+      userAddress: this.rhoSDK.signerAddress,
       count: 50
     });
     const tradeRateSum = trades.reduce(
