@@ -17,9 +17,7 @@ export default () => ({
     maxRisk: Number(process.env.TRADE_MAX_RISK || '10000'),
     // Max notional value [USDT]
     maxTradeSize: Number(process.env.TRADE_MAX_SIZE || '1000'),
-    maxMarginInUse: Number(process.env.TRADE_MAX_MARGIN_IN_USE || '100'),
-    // Max losses per day [USD]
-    warningLosses: Number(process.env.TRADE_WARNING_LOSSES || '1000'),
+    maxMarginInUse: Number(process.env.TRADE_MAX_MARGIN_IN_USE || '0'),
     riskLevel: Number(process.env.TRADE_RISK_LEVEL || '1000'),
     xFactor: Number(process.env.TRADE_X_FACTOR || '5'),
     yFactor: Number(process.env.TRADE_Y_FACTOR || '15'),

@@ -6,15 +6,13 @@
 | Env variable name      | Required | Default | Description                                                                                                          |                                                                                                                                                                                                                                                                                                                                                                                                                                                
 |------------------------|----------|---------|----------------------------------------------------------------------------------------------------------------------|
 | PRIVATE_KEY            | true     | -       | Bot account private key to sign a transactions. Use comma separated values for multiple accounts: 0x123,0x456,0x789. |
-| STRATEGY_TYPE          | false    | default | Bot strategy type                                                                                                    |
 | NETWORK_TYPE           | false    | testnet | mainnet / testnet                                                                                                    |
-| RPC_URL                | true     | -       | RPC URL                                                                                                              |
+| RPC_URL                | false    | -       | custom RPC URL                                                                                                       |
 | MARKET_IDS             | false    | -       | List of market ids, divided by comma, for example: 0x123,0x567                                                       |
 | FUTURE_IDS             | false    | -       | List of future ids, divided by comma, for example: 0x123,0x567                                                       |
-| TRADE_AVERAGE_INTERVAL | false    | 30      | [seconds] Average interval between trades                                                                            |
-| TRADE_MAX_RISK         | false    | 1       | [Integer] Used in trading rules to compare against dv01                                                              |
+| TRADE_AVERAGE_INTERVAL | false    | 600     | [seconds] Average interval between trades                                                                            |
 | TRADE_MAX_SIZE         | false    | 1000    | [integer, USDT] Max notional amount                                                                                  |
-| TRADE_WARNING_LOSSES   | false    | 1000    | [integer, USDT] Max warning losses per day                                                                           |
+| TRADE_MAX_RISK         | false    | 1       | [Integer] Used in trading rules to compare against dv01                                                              |
 
 ## Run locally
 1) Prepare .env config. `.env.example` can be used as reference.
@@ -31,7 +29,6 @@ npm run start
 
 ## Run in docker container
 
-
 1. Pull docker image from the [public registry](https://hub.docker.com/r/rholabs/trading-bot)
 ```sh
 docker pull rholabs/trading-bot:1.4.0
@@ -46,13 +43,55 @@ docker pull rholabs/trading-bot:1.4.0
 docker run --env-file .env rholabs/trading-bot:1.4.0
 ```
 
-## Architecture overview
+## Bot strategy
 
-The trading bot is designed to support various trading strategies, while also being relatively simple to set up.
+**P_Receive**: probability of the bot to sell (receive rates)
 
-The current version of the bot supports only one strategy, which is located in the directory `src/trading/base-strategy`. Each bot strategy is a separate “service” in terms of NestJS architecture. Strategies are separated from each other; bot cannot be launched with two strategies at the same time.
+**P_Pay**: probability of the bot to buy (pay rates)
 
-Interaction with the protocol is done through the [rho-sdk](https://www.npmjs.com/package/@rholabs/rho-sdk) library, available on npm.
+**AvgRate**: average rate of the last 50 trades done by the bot
+
+```shell
+1. If (|DV01| ≤ RiskLevel1)   && (Rate > (1 + X) AvgRate ) then:
+    
+          P_Receive > P_Pay
+```
+```shell
+2. If (|DV01| ≤ RiskLevel1)   && (Rate < (1 - X) AvgRate ) then:
+    
+          P_Receive < P_Pay
+```
+```shell
+3. If (RiskLevel1 < |DV01| < MaxRisk) &&  (RiskDirection = Receiver) &&  (Rate < (1 - Y) AvgRate ) then:
+    
+          P_Receive << P_Pay;
+    
+    If (RiskLevel1 < |DV01| < MaxRisk) &&  (RiskDirection = Receiver) &&  (Rate > (1 + Z) AvgRate ) then:
+    
+     P_Receive > P_Pay;
+```
+
+```shell
+4. If (RiskLevel1<|DV01| < MaxRisk) && (RiskDirection = Payer)  && (Rate > (1 + Y) AvgRate ) then:
+    
+          P_Receive >> P_Pay;
+    
+    If (RiskLevel1 < |DV01| < MaxRisk) &&  (RiskDirection = Payer) &&  (Rate < (1 - Z) AvgRate ) then:
+    
+     P_Receive < P_Pay;
+```
+
+```shell
+5. If (|DV01| ≥ MaxRisk)  &&  (RiskDirection = Receiver) , then:
+    
+          P_Receive = 0
+```
+
+```shell
+6. If (|DV01| ≥ MaxRisk)  &&  (RiskDirection = Payer) , then:
+    
+          P_Pay = 0
+```
 
 ## How to implement new strategy
 
@@ -66,6 +105,7 @@ NestJS will generate new service and add it to Trading module.
 
 2. Go to `src/trading/advanced-strategy/advanced-strategy.service.ts` and implement custom strategy. You can use `src/trading/base-strategy/base-strategy.service.ts` as an example.
 3. Add specific code for launching new strategy in AppService (`src/app.service.ts`)
+
 
 ## Trading from multiple accounts
 Use comma separated values to trade from multiple accounts.

@@ -314,7 +314,7 @@ export class BaseStrategyService {
     }
 
     const currentMargin = marginTotal(portfolio.marginState.margin);
-    if (currentMargin > maxMarginInUse) {
+    if (maxMarginInUse > 0 && currentMargin > maxMarginInUse) {
       this.logger.warn(
         `Current margin: ${currentMargin}, maxMarginInUse: ${maxMarginInUse}, skip this trading attempt`,
       );
