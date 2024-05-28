@@ -85,3 +85,22 @@ docker buildx build -t rholabs/trading-bot:1.6.0  --platform linux/amd64 .
 
 docker push rholabs/trading-bot:1.6.0
 ```
+
+## Market and Future ids
+
+### Mainnet
+
+| Name   | Future | Market | Maturity                                                                                                          |                                                                                                                                                                                                                                                                                                                                                                                                                                                
+|------------------------|----------|---------|----------------------------------------------------------------------------------------------------------------------|
+| Binance BTCUSDT           | 0x96c41719e4d49d669fa631b2ad3ba6a99fc70110bcc5ab3a31019d95fa0367fa     | 0x852d33076c184e71c510bd29bb2e8ad041f4e32ebfb4dd119469332664a56bce       | June/24 |
+| Binance ETHUSDT           | 0x883a66f1be5f4278eedece824b92be1c3ca1ae57d441b4047cd2d4c1fbbf9574    | 0x5dc9814bc6650ce1e620667427cea9497265edd04844c865aaa9e49faf7fe1e0 | June/24
+
+
+### Testnet
+
+| Name   | Future | Market | Maturity                                                                                                          |                                                                                                                                                                                                                                                                                                                                                                                                                                                
+|------------------------|----------|---------|----------------------------------------------------------------------------------------------------------------------|
+| Binance BTCUSDT           | 0x793c2bb8ffcd34b60cdf14f331b200ebca9e72d784f14a2c34d0f487784812c7     | 0xb46e832d0cb2456cdc7e2ba8eebd91e5eebba17f50ee6c7a34450e5b8a22467c       | 28/06/24 |
+| Binance BTCUSDT           | 0xfc7327efacaa1e2c54c79d07f2d493aab5801d82db18af40b0365e5c7c7bcc28    | 0xb46e832d0cb2456cdc7e2ba8eebd91e5eebba17f50ee6c7a34450e5b8a22467c | 27/09/2024
+| Binance ETHUSDT           | 0x91d60dfbfe4e0f45cd0e6d4fd0dccc9997258f1012a04227f8831d3d3b1d43b8     | 0x26099aa48729f70a8df74968eb64f93726fb7154f56c26f9845266648cf36bce       | 28/06/24 |
+| Binance ETHUSDT           | 0xafbac802fbd7c48209aaea2c9ef8bfa75985ab10f555723e0f2dfd27e19b50fe    | 0x26099aa48729f70a8df74968eb64f93726fb7154f56c26f9845266648cf36bce | 27/09/2024
