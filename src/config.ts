@@ -13,7 +13,7 @@ export default () => ({
     marketIds: parseStringArray(process.env.MARKET_IDS || ''),
     futureIds: parseStringArray(process.env.FUTURE_IDS || ''),
     // Average interval between trade attempts [seconds]
-    avgInterval: Number(process.env.TRADE_AVERAGE_INTERVAL || '600'),
+    avgInterval: Number(process.env.TRADE_AVERAGE_INTERVAL || '3000'),
     maxRisk: Number(process.env.TRADE_MAX_RISK || '10000'),
     // Max notional value [USDT]
     maxTradeSize: Number(process.env.TRADE_MAX_SIZE || '1000'),
