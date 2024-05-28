@@ -54,7 +54,7 @@ docker run --env-file .env rholabs/trading-bot:1.5.1
 ## Bot strategy
 
 **Basic logic:**
-* Trades at random intervals selected from the range +-50%, averaging TRADE_AVERAGE_INTERVAL (Default: averaging a trade c. every 50 minutes.)
+* Trades at random intervals selected from the range +-50%, averaging TRADE_AVERAGE_INTERVAL (Default: averaging a trade every 3000 seconds (50 minutes))
 * Trades random notional between 0 and TRADE_MAX_SIZE (Default: 100,000 USDT)
 * Side is chosen randomly, unless the resulting absolute exposure exceeds TRADE_MAX_RISK (Default: 200,000 USDT)
 * If the exposure is >TRADE_MAX_RISK on either side (payer OR receiver), the bot selects the opposite side to reduce the exposure.
