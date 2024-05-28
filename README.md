@@ -31,7 +31,7 @@ npm run start
 
 1. Pull docker image from the [public registry](https://hub.docker.com/r/rholabs/trading-bot)
 ```sh
-docker pull rholabs/trading-bot:1.5.1
+docker pull rholabs/trading-bot:1.5.4
 ```
 
 2. Create .env file with list or environment variables. `.env.example` can be used as reference.
@@ -48,7 +48,7 @@ TRADE_AVERAGE_INTERVAL=600
 
 3. Run bot in docker container:
 ```shell
-docker run --env-file .env rholabs/trading-bot:1.5.1
+docker run --env-file .env rholabs/trading-bot:1.5.4
 ```
 
 ## Bot strategy
