@@ -8,7 +8,7 @@ export class MetricsService {
 
   constructor() {
     const register = new prometheusClient.Registry();
-    register.setDefaultLabels({ app: 'trading-bot' });
+    register.setDefaultLabels({ app: 'rho_trading_bot' });
     prometheusClient.collectDefaultMetrics({ register });
     this.register = register;
 
@@ -16,7 +16,6 @@ export class MetricsService {
       name: 'trades_counter',
       help: 'Trades counter',
     });
-
     register.registerMetric(this.tradesCounter);
   }
 

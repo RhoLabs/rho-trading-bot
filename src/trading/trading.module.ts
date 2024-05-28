@@ -15,9 +15,12 @@ import { ConfigurationService } from '../configuration/configuration.service';
     BaseStrategyService,
     Web3Service,
     MarketApiService,
-    MetricsService,
-    ConfigurationService
+    ConfigurationService,
+    MetricsService
   ],
-  exports: [BaseStrategyService]
+  exports: [
+    BaseStrategyService,
+    MetricsService
+  ]
 })
 export class TradingModule {}

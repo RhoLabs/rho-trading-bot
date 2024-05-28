@@ -1,6 +1,6 @@
 {
   "name": "rho-trading-bot",
-  "version": "1.5.4",
+  "version": "1.6.0",
   "description": "Rho Protocol Trading Bot",
   "author": "Artem Kolodko",
   "private": true,

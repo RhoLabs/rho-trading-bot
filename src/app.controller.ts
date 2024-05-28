@@ -1,9 +1,12 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
+import { MetricsService } from './metrics/metrics.service';
 
 @Controller()
 export class AppController {
-  constructor() {}
+  constructor(
+    private readonly metricsService: MetricsService
+  ) {}
 
   @Get('/')
   @ApiOkResponse({
@@ -22,8 +25,8 @@ export class AppController {
     return 'OK';
   }
 
-  // @Get('/metrics')
-  // async getMetrics() {
-  //   return await this.metricsService.getMetrics();
-  // }
+  @Get('/metrics')
+  async getMetrics() {
+    return await this.metricsService.getMetrics();
+  }
 }

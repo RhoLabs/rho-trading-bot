@@ -6,7 +6,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TradingModule } from './trading/trading.module';
 import configuration from './config';
-import { BaseStrategyService } from './trading/base-strategy/base-strategy.service';
 import { ConfigurationService } from './configuration/configuration.service';
 
 @Module({
@@ -22,6 +21,6 @@ import { ConfigurationService } from './configuration/configuration.service';
   providers: [
     AppService,
     ConfigurationService,
-  ],
+  ]
 })
 export class AppModule {}

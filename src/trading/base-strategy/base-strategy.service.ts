@@ -13,11 +13,14 @@ import {
 import { Wallet, TransactionRequest, JsonRpcProvider, ethers } from '@rholabs/rho-sdk/node_modules/ethers'
 import {
   fromBigInt,
-  generateRandom, getDV01FromNotional, getMax,
+  generateRandom,
+  getDV01FromNotional,
+  getMax,
   getRandomArbitrary,
   toBigInt,
 } from '../../utils';
 import { ConfigurationService } from '../../configuration/configuration.service';
+import { MetricsService } from '../../metrics/metrics.service';
 
 @Injectable()
 export class BaseStrategyService {
@@ -27,7 +30,8 @@ export class BaseStrategyService {
     private configService: ConfigService,
     private web3Service: Web3Service,
     private schedulerRegistry: SchedulerRegistry,
-    private configurationService: ConfigurationService
+    private configurationService: ConfigurationService,
+    private metricsService: MetricsService
   ) {
     const privateKeys = configurationService.getPrivateKeys();
     if (privateKeys.length === 0) {
@@ -50,14 +54,19 @@ export class BaseStrategyService {
       return market.futures.filter(future => configFutureIds.includes(future.id))
     }).flat()
 
+    if(futures.length === 0) {
+      this.logger.error('Failed to start new trading tasks: no active futures found. Use [FUTURE_IDS] to set list of futures.')
+      process.exit(1)
+    }
+
     if(this.schedulerRegistry.getTimeouts().length === 0) {
       this.logger.log(`Init new trading tasks. Bot accounts: ${
         privateKeys.length
       }, futures: ${
         futures.length
-      } (${
+      } (ids: "${
         futures.map(item => item.id)
-      }).`)
+      }").`)
     }
 
     for (const future of futures) {
@@ -406,6 +415,7 @@ export class BaseStrategyService {
     })
     if(txReceipt) {
       this.logger.log(`[${signerAddress}] Successful trade! tx hash: ${txReceipt.hash}`);
+      this.metricsService.increaseTradesCounter()
     }
     return txReceipt
   }
