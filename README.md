@@ -53,53 +53,11 @@ docker run --env-file .env rholabs/trading-bot:1.5.1
 
 ## Bot strategy
 
-**P_Receive**: probability of the bot to sell (receive rates)
-
-**P_Pay**: probability of the bot to buy (pay rates)
-
-**AvgRate**: average rate of the last 50 trades done by the bot
-
-```shell
-1. If (|DV01| ≤ RiskLevel1)   && (Rate > (1 + X) AvgRate ) then:
-    
-          P_Receive > P_Pay
-```
-```shell
-2. If (|DV01| ≤ RiskLevel1)   && (Rate < (1 - X) AvgRate ) then:
-    
-          P_Receive < P_Pay
-```
-```shell
-3. If (RiskLevel1 < |DV01| < MaxRisk) &&  (RiskDirection = Receiver) &&  (Rate < (1 - Y) AvgRate ) then:
-    
-          P_Receive << P_Pay;
-    
-    If (RiskLevel1 < |DV01| < MaxRisk) &&  (RiskDirection = Receiver) &&  (Rate > (1 + Z) AvgRate ) then:
-    
-     P_Receive > P_Pay;
-```
-
-```shell
-4. If (RiskLevel1<|DV01| < MaxRisk) && (RiskDirection = Payer)  && (Rate > (1 + Y) AvgRate ) then:
-    
-          P_Receive >> P_Pay;
-    
-    If (RiskLevel1 < |DV01| < MaxRisk) &&  (RiskDirection = Payer) &&  (Rate < (1 - Z) AvgRate ) then:
-    
-     P_Receive < P_Pay;
-```
-
-```shell
-5. If (|DV01| ≥ MaxRisk)  &&  (RiskDirection = Receiver) , then:
-    
-          P_Receive = 0
-```
-
-```shell
-6. If (|DV01| ≥ MaxRisk)  &&  (RiskDirection = Payer) , then:
-    
-          P_Pay = 0
-```
+**Basic logic:**
+* Trades at random intervals selected from the range +-50%, averaging TRADE_AVERAGE_INTERVAL (default: averaging a trade c. every 50 minutes.)
+* Trades random notional between 0 and TRADE_MAX_SIZE (Default: 100,000 USDT)
+* Side is chosen randomly, unless the resulting absolute exposure exceeds TRADE_MAX_RISK (Default: 200,000 USDT)
+* If the exposure is >200,000 USDT on either side (payer OR receiver), the bot selects the opposite side to reduce the exposure.
 
 ## How to implement new strategy
 
