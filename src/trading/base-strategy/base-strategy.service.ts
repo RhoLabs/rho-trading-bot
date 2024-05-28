@@ -102,7 +102,8 @@ export class BaseStrategyService {
     }
 
     const nextTradingTimeout = getRandomArbitrary(
-      Math.round(avgInterval / 2), Math.round(avgInterval * 2)
+      Math.round(avgInterval / 2),
+      Math.round(avgInterval * 1.5)
     );
     const nextTradeTimestamp = Date.now() + nextTradingTimeout * 1000
 
@@ -164,6 +165,10 @@ export class BaseStrategyService {
     const tradePy1 = 1 - tradePx1;
     const tradePx2 = this.configService.get('trading.px2');
     const tradePy2 = 1 - tradePx2;
+
+    // console.log('Bot params: dv01', dv01, 'maxRisk', maxRisk, 'riskLevel', riskLevel, 'marketRate', marketRate, 'xFactor', xFactor, 'avgRate', avgRate)
+
+    // Get trade quote and be sure that dv01 AFTER THE TRADE < maxRisk from params
 
     // Rule 1
     if (dv01 <= riskLevel && marketRate > (1 + xFactor) * avgRate) {
