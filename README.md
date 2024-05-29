@@ -34,14 +34,15 @@ npm run start
 docker pull rholabs/trading-bot:1.6.0
 ```
 
-2. Create .env file with list or environment variables. `.env.example` can be used as reference.
+2. Create .env file with list or environment variables. `.env.testnet.example` can be used as reference.
 ```shell
-PRIVATE_KEY=0x123
+PRIVATE_KEY=<PRIVATE_KEY_ARBITRUM_SEPOLIA>
 NETWORK_TYPE=testnet
-MARKET_IDS=0x123
-FUTURE_IDS=0x456
-TRADE_MAX_SIZE=1000
-TRADE_AVERAGE_INTERVAL=600
+MARKET_IDS=0xb46e832d0cb2456cdc7e2ba8eebd91e5eebba17f50ee6c7a34450e5b8a22467c
+FUTURE_IDS=0x793c2bb8ffcd34b60cdf14f331b200ebca9e72d784f14a2c34d0f487784812c7
+TRADE_MAX_SIZE=100000
+TRADE_MAX_RISK=200000
+TRADE_AVERAGE_INTERVAL=3000
 ```
 
 **NOTE**: Bot trading account (env: `PRIVATE_KEY`) should have underlying tokens on balance to execute trades.
