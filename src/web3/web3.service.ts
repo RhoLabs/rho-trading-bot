@@ -113,10 +113,9 @@ export class Web3Service {
     return await this.rhoSDK.getBalance(this.rhoSDK.signerAddress);
   }
 
-  async getAvgTradeRate(marketId: string) {
+  async getAvgTradeRate(futureId: string) {
     const trades = await this.rhoSDK.dataServiceAPI.getTrades({
-      marketId,
-      userAddress: this.rhoSDK.signerAddress,
+      futureId,
       count: 50
     });
     const tradeRateSum = trades.reduce(
@@ -150,7 +149,7 @@ export class Web3Service {
           ? RiskDirection.RECEIVER
           : RiskDirection.PAYER;
 
-    const avgRate = await this.getAvgTradeRate(future.marketId);
+    const avgRate = await this.getAvgTradeRate(future.id);
     const markets = await this.rhoSDK.getActiveMarkets()
     const marketRate = markets.reduce((value, item) => {
       const futureItem = item.futures.find(futureItem => futureItem.id === futureId)
