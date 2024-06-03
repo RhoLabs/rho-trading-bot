@@ -10,9 +10,9 @@
 | RPC_URL                | false    | -       | custom RPC URL                                                                                                       |
 | MARKET_IDS             | false    | -       | List of market ids, divided by comma, for example: 0x123,0x567                                                       |
 | FUTURE_IDS             | false    | -       | List of future ids, divided by comma, for example: 0x123,0x567                                                       |
-| TRADE_AVERAGE_INTERVAL | false    | 600     | [seconds] Average interval between trades                                                                            |
-| TRADE_MAX_SIZE         | false    | 1000    | [integer, USDT] Max notional amount                                                                                  |
-| TRADE_MAX_RISK         | false    | 1       | [Integer] Used in trading rules to compare against dv01                                                              |
+| TRADE_AVERAGE_INTERVAL | false    | 3000    | [seconds] Average interval between trades                                                                            |
+| TRADE_MAX_SIZE         | false    | 100000  | [notional] Max notional amount                                                                                       |
+| TRADE_MAX_RISK         | false    | 200000  | [notional] Used in trading rules to compare against dv01. Set in notional, converted to dv01.                        |
 
 ## Run locally
 1) Prepare .env config. `.env.example` can be used as reference.
