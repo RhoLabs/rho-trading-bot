@@ -9,6 +9,7 @@ import {
   MarketInfo,
   RiskDirection,
   TradeQuote,
+  getFutureAlias
 } from '@rholabs/rho-sdk';
 import { Wallet, TransactionRequest, JsonRpcProvider, ethers } from '@rholabs/rho-sdk/node_modules/ethers'
 import {
@@ -41,21 +42,46 @@ export class BaseStrategyService {
   }
 
   async start() {
-    const configMarketIds = this.configurationService.getMarketIds()
+    const configFutureAliases = this.configurationService.getFutures();
+    const configMarketIds = this.configurationService.getMarketIds();
     const configFutureIds = this.configurationService.getFutureIds();
     const privateKeys = this.configurationService.getPrivateKeys();
 
     let markets = await this.web3Service.rhoSDK.getActiveMarkets();
-    markets = markets.filter((item) =>
-      configMarketIds.includes(item.descriptor.id.toLowerCase()),
-    );
+    const marketFutures = markets.map(item => item.futures).flat()
+    let tradingFutures = []
 
-    const futures = markets.map(market => {
-      return market.futures.filter(future => configFutureIds.includes(future.id))
-    }).flat()
+    // validate config params
+    configFutureAliases.map(alias => {
+      const isExistedFuture = marketFutures.find(future => {
+        const market = markets.find(item => item.descriptor.id === future.marketId)
+        return !!market
+      })
+    })
 
-    if(futures.length === 0) {
-      this.logger.error('Failed to start new trading tasks: no active futures found. Use [FUTURE_IDS] to set list of futures.')
+    if(configFutureAliases.length > 0) {
+      tradingFutures = marketFutures.filter(future => {
+        const market = markets.find(item => item.descriptor.id === future.marketId)
+        const futureAlias = getFutureAlias(market, future)
+        return configFutureAliases.includes(futureAlias.toLowerCase())
+      })
+    } else {
+      // if(configMarketIds.length > 0) {
+      //   this.logger.log(`Deprecated param: [MARKET_IDS]. Use [FUTURES] instead.`)
+      //   tradingFutures = markets.filter((item) =>
+      //     configMarketIds.includes(item.descriptor.id.toLowerCase()),
+      //   );
+      // }
+      if(configFutureIds.length > 0) {
+        this.logger.log(`Deprecated param: [FUTURE_IDS]. Use [FUTURES] instead.`)
+        tradingFutures = markets.map(market => {
+          return market.futures.filter(future => configFutureIds.includes(future.id))
+        }).flat()
+      }
+    }
+
+    if(tradingFutures.length === 0) {
+      this.logger.error('Failed to start new trading tasks: no active futures found. Use [FUTURES] to set list of futures.')
       process.exit(1)
     }
 
@@ -63,18 +89,14 @@ export class BaseStrategyService {
       this.logger.log(`Init new trading tasks. Bot accounts: ${
         privateKeys.length
       }, futures: ${
-        futures.length
-      } (ids: "${
-        futures.map(item => item.id)
-      }").`)
+        tradingFutures.length
+      } (aliases: "${configFutureAliases}").`)
     }
 
-    for (const future of futures) {
+    for (const future of tradingFutures) {
       const market = markets.find(market => market.descriptor.id === future.marketId)
-      for (const future of futures) {
-        if(!this.getTimeoutByName(future.id)) {
-          await this.scheduleTrade(market, future)
-        }
+      if(!this.getTimeoutByName(future.id)) {
+        await this.scheduleTrade(market, future)
       }
     }
   }
