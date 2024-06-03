@@ -72,21 +72,21 @@ export class BaseStrategyService {
       })
 
       if(configMarketIds.length > 0) {
-        this.logger.log(`Config [FUTURES]: ${configFutureAliases}`)
+        this.logger.log(`Config param [FUTURES]: ${configFutureAliases}`)
       }
 
       if(configMarketIds.length > 0) {
-        this.logger.warn(`Deprecated: config param [MARKET_IDS] will be ignored`)
+        this.logger.warn(`Config param [MARKET_IDS] is deprecated and will be ignored`)
       }
       if(configFutureIds.length > 0) {
-        this.logger.warn(`Deprecated: config param [FUTURE_IDS] will be ignored`)
+        this.logger.warn(`Config param [FUTURE_IDS] is deprecated and will be ignored`)
       }
     } else {
       if(configMarketIds.length > 0) {
-        this.logger.log(`Deprecated param: [MARKET_IDS]. Use [FUTURES] instead.`)
+        this.logger.warn(`Config param [MARKET_IDS] is deprecated. Use [FUTURES] instead.`)
       }
       if(configFutureIds.length > 0) {
-        this.logger.log(`Deprecated param: [FUTURE_IDS]. Use [FUTURES] instead.`)
+        this.logger.warn(`Config param [FUTURE_IDS] is deprecated. Use [FUTURES] instead.`)
         tradingFutures = markets.map(market => {
           return market.futures.filter(future => configFutureIds.includes(future.id))
         }).flat()
@@ -94,7 +94,7 @@ export class BaseStrategyService {
     }
 
     if(tradingFutures.length === 0) {
-      this.logger.error('Failed to start new trading tasks: no active futures found. Use [FUTURES] to set list of futures.')
+      this.logger.error('Failed to start new trading tasks: no futures found in config. Use [FUTURES] to set list of active futures.')
       process.exit(1)
     }
 
@@ -395,7 +395,7 @@ export class BaseStrategyService {
     this.logger.log(
       `[${signer.address}]` +
       ` Trade attempt ` +
-      `${market.descriptor.sourceName} ${market.descriptor.instrumentName}, futureId: ${tradeParams.futureId}, ` +
+      `${getFutureAlias(market, future)}, ` +
       `riskDirection: ${tradeParams.riskDirection}, ` +
       `notional: ${tradeParams.notional}, ` +
       `futureRateLimit: ${tradeParams.futureRateLimit}, ` +
