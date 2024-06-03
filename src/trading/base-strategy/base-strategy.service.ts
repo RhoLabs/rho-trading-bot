@@ -9,6 +9,7 @@ import {
   MarketInfo,
   RiskDirection,
   TradeQuote,
+  getFutureAlias
 } from '@rholabs/rho-sdk';
 import { Wallet, TransactionRequest, JsonRpcProvider, ethers } from '@rholabs/rho-sdk/node_modules/ethers'
 import {
@@ -41,21 +42,59 @@ export class BaseStrategyService {
   }
 
   async start() {
-    const configMarketIds = this.configurationService.getMarketIds()
+    const configFutureAliases = this.configurationService.getFutures();
+    const configMarketIds = this.configurationService.getMarketIds();
     const configFutureIds = this.configurationService.getFutureIds();
     const privateKeys = this.configurationService.getPrivateKeys();
 
     let markets = await this.web3Service.rhoSDK.getActiveMarkets();
-    markets = markets.filter((item) =>
-      configMarketIds.includes(item.descriptor.id.toLowerCase()),
-    );
+    const marketFutures = markets.map(item => item.futures).flat()
+    let tradingFutures = []
 
-    const futures = markets.map(market => {
-      return market.futures.filter(future => configFutureIds.includes(future.id))
-    }).flat()
+    const allFutureAliases = marketFutures.map(future => {
+      const market = markets.find(item => item.descriptor.id === future.marketId)
+      return getFutureAlias(market, future).toLowerCase()
+    })
 
-    if(futures.length === 0) {
-      this.logger.error('Failed to start new trading tasks: no active futures found. Use [FUTURE_IDS] to set list of futures.')
+    // Validate config params
+    configFutureAliases.forEach(alias => {
+      if(!allFutureAliases.includes(alias.toLowerCase())) {
+        this.logger.error(`Future with alias "${alias}" doesn't exists, exit`)
+        process.exit(1)
+      }
+    })
+
+    if(configFutureAliases.length > 0) {
+      tradingFutures = marketFutures.filter(future => {
+        const market = markets.find(item => item.descriptor.id === future.marketId)
+        const futureAlias = getFutureAlias(market, future).toLowerCase()
+        return configFutureAliases.includes(futureAlias)
+      })
+
+      if(configMarketIds.length > 0) {
+        this.logger.log(`Config param [FUTURES]: ${configFutureAliases}`)
+      }
+
+      if(configMarketIds.length > 0) {
+        this.logger.warn(`Config param [MARKET_IDS] is deprecated and will be ignored`)
+      }
+      if(configFutureIds.length > 0) {
+        this.logger.warn(`Config param [FUTURE_IDS] is deprecated and will be ignored`)
+      }
+    } else {
+      if(configMarketIds.length > 0) {
+        this.logger.warn(`Config param [MARKET_IDS] is deprecated. Use [FUTURES] instead.`)
+      }
+      if(configFutureIds.length > 0) {
+        this.logger.warn(`Config param [FUTURE_IDS] is deprecated. Use [FUTURES] instead.`)
+        tradingFutures = markets.map(market => {
+          return market.futures.filter(future => configFutureIds.includes(future.id))
+        }).flat()
+      }
+    }
+
+    if(tradingFutures.length === 0) {
+      this.logger.error('Failed to start new trading tasks: no futures found in config. Use [FUTURES] to set list of active futures.')
       process.exit(1)
     }
 
@@ -63,18 +102,14 @@ export class BaseStrategyService {
       this.logger.log(`Init new trading tasks. Bot accounts: ${
         privateKeys.length
       }, futures: ${
-        futures.length
-      } (ids: "${
-        futures.map(item => item.id)
-      }").`)
+        tradingFutures.length
+      } (aliases: "${configFutureAliases}").`)
     }
 
-    for (const future of futures) {
+    for (const future of tradingFutures) {
       const market = markets.find(market => market.descriptor.id === future.marketId)
-      for (const future of futures) {
-        if(!this.getTimeoutByName(future.id)) {
-          await this.scheduleTrade(market, future)
-        }
+      if(!this.getTimeoutByName(future.id)) {
+        await this.scheduleTrade(market, future)
       }
     }
   }
@@ -360,7 +395,7 @@ export class BaseStrategyService {
     this.logger.log(
       `[${signer.address}]` +
       ` Trade attempt ` +
-      `${market.descriptor.sourceName} ${market.descriptor.instrumentName}, futureId: ${tradeParams.futureId}, ` +
+      `${getFutureAlias(market, future)}, ` +
       `riskDirection: ${tradeParams.riskDirection}, ` +
       `notional: ${tradeParams.notional}, ` +
       `futureRateLimit: ${tradeParams.futureRateLimit}, ` +

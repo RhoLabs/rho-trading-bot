@@ -48,12 +48,18 @@ export class ConfigurationService {
     return BotStrategy.default
   }
 
+  // Deprecated
   getMarketIds(): string[] {
     return this.configService.get('trading.marketIds')
   }
 
+  // Deprecated
   getFutureIds(): string[] {
     return this.configService.get('trading.futureIds')
+  }
+
+  getFutures(): string[] {
+    return this.configService.get('trading.futures')
   }
 
   getPrivateKeys(): string[] {

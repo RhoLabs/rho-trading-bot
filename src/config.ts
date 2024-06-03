@@ -10,8 +10,10 @@ export default () => ({
   rpcUrl: process.env.RPC_URL || '',
   strategy: process.env.STRATEGY_TYPE || 'default',
   trading: {
-    marketIds: parseStringArray(process.env.MARKET_IDS || ''),
-    futureIds: parseStringArray(process.env.FUTURE_IDS || ''),
+    futures: parseStringArray(process.env.FUTURES || ''),
+    marketIds: parseStringArray(process.env.MARKET_IDS || ''), // deprecated, use FUTURES param
+    futureIds: parseStringArray(process.env.FUTURE_IDS || ''), // deprecated, use FUTURES param
+
     // Average interval between trade attempts [seconds]
     avgInterval: Number(process.env.TRADE_AVERAGE_INTERVAL || '3000'),
     maxRisk: Number(process.env.TRADE_MAX_RISK || '200000'),
