@@ -51,27 +51,40 @@ export class BaseStrategyService {
     const marketFutures = markets.map(item => item.futures).flat()
     let tradingFutures = []
 
-    // validate config params
-    configFutureAliases.map(alias => {
-      const isExistedFuture = marketFutures.find(future => {
-        const market = markets.find(item => item.descriptor.id === future.marketId)
-        return !!market
-      })
+    const allFutureAliases = marketFutures.map(future => {
+      const market = markets.find(item => item.descriptor.id === future.marketId)
+      return getFutureAlias(market, future).toLowerCase()
+    })
+
+    // Validate config params
+    configFutureAliases.forEach(alias => {
+      if(!allFutureAliases.includes(alias.toLowerCase())) {
+        this.logger.error(`Future with alias "${alias}" doesn't exists, exit`)
+        process.exit(1)
+      }
     })
 
     if(configFutureAliases.length > 0) {
       tradingFutures = marketFutures.filter(future => {
         const market = markets.find(item => item.descriptor.id === future.marketId)
-        const futureAlias = getFutureAlias(market, future)
-        return configFutureAliases.includes(futureAlias.toLowerCase())
+        const futureAlias = getFutureAlias(market, future).toLowerCase()
+        return configFutureAliases.includes(futureAlias)
       })
+
+      if(configMarketIds.length > 0) {
+        this.logger.log(`Config [FUTURES]: ${configFutureAliases}`)
+      }
+
+      if(configMarketIds.length > 0) {
+        this.logger.warn(`Deprecated: config param [MARKET_IDS] will be ignored`)
+      }
+      if(configFutureIds.length > 0) {
+        this.logger.warn(`Deprecated: config param [FUTURE_IDS] will be ignored`)
+      }
     } else {
-      // if(configMarketIds.length > 0) {
-      //   this.logger.log(`Deprecated param: [MARKET_IDS]. Use [FUTURES] instead.`)
-      //   tradingFutures = markets.filter((item) =>
-      //     configMarketIds.includes(item.descriptor.id.toLowerCase()),
-      //   );
-      // }
+      if(configMarketIds.length > 0) {
+        this.logger.log(`Deprecated param: [MARKET_IDS]. Use [FUTURES] instead.`)
+      }
       if(configFutureIds.length > 0) {
         this.logger.log(`Deprecated param: [FUTURE_IDS]. Use [FUTURES] instead.`)
         tradingFutures = markets.map(market => {
