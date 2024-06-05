@@ -48,7 +48,7 @@ TRADE_AVERAGE_INTERVAL=3000
 
 3. Run bot in docker container:
 ```shell
-docker run --env-file .env rholabs/trading-bot:1.6.0
+docker run --env-file .env rholabs/trading-bot:1.6.1
 ```
 
 ## Bot strategy
