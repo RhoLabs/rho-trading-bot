@@ -192,10 +192,7 @@ export class BaseStrategyService {
       this.configService.get('trading.maxRisk'),
       secondsToExpiry,
     );
-    const riskLevel = getDV01FromNotional(
-      this.configService.get('trading.riskLevel'),
-      secondsToExpiry,
-    );
+    const riskLevel = 0.3 * maxRisk
 
     const xFactor = this.configService.get('trading.xFactor') / 10 ** 4;
     const yFactor = this.configService.get('trading.yFactor') / 10 ** 4;

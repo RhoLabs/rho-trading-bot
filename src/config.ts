@@ -20,7 +20,6 @@ export default () => ({
     // Max notional value [USDT]
     maxTradeSize: Number(process.env.TRADE_MAX_SIZE || '100000'),
     maxMarginInUse: Number(process.env.TRADE_MAX_MARGIN_IN_USE || '0'),
-    riskLevel: Number(process.env.TRADE_RISK_LEVEL || '1000'),
     xFactor: Number(process.env.TRADE_X_FACTOR || '5'),
     yFactor: Number(process.env.TRADE_Y_FACTOR || '15'),
     zFactor: Number(process.env.TRADE_Z_FACTOR || '10'),
