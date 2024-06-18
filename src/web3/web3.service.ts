@@ -174,7 +174,7 @@ export class Web3Service {
   }): Promise<TransactionReceipt> {
     const {params, signer, txRequestParams = {}} = data
 
-    const retriesCount = 1;
+    const retriesCount = 3;
 
     for (let i = 0; i < retriesCount; i++) {
       try {
