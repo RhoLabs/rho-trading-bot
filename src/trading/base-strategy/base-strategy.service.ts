@@ -26,6 +26,8 @@ import { MetricsService } from '../../metrics/metrics.service';
 @Injectable()
 export class BaseStrategyService {
   private readonly logger = new Logger(BaseStrategyService.name);
+  failedAttemptsInRow = 0
+  maxFailedAttemptsInRow = 3
 
   constructor(
     private configService: ConfigService,
@@ -138,10 +140,25 @@ export class BaseStrategyService {
       try {
         const result = await this.initiateTrade(market, future, signer);
         completedTrades.push(result)
+        this.failedAttemptsInRow = 0
       } catch (e) {
         this.logger.error(`[${
           signer.address
         }] Trade attempt failed:`, e)
+
+        if(e && e.message && typeof e.message === 'string') {
+          if(e.message.includes('insufficient funds for intrinsic transaction cost')) {
+            this.logger.error(`Insufficient funds! Please refill bot address balance: "${signer.address}". Exit.`)
+            process.exit(1)
+          }
+        }
+
+        this.failedAttemptsInRow += 1
+
+        if(this.failedAttemptsInRow >= this.maxFailedAttemptsInRow) {
+          this.logger.error(`The limit of the maximum number of unsuccessful attempts in a row has been exceeded (${this.maxFailedAttemptsInRow}), exit.`)
+          process.exit(1)
+        }
       }
     }
 

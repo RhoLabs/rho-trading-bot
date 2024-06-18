@@ -174,7 +174,7 @@ export class Web3Service {
   }): Promise<TransactionReceipt> {
     const {params, signer, txRequestParams = {}} = data
 
-    const retriesCount = 3;
+    const retriesCount = 1;
 
     for (let i = 0; i < retriesCount; i++) {
       try {
@@ -191,6 +191,9 @@ export class Web3Service {
           `Execute trade failed (attempt: ${i + 1} / ${retriesCount})`,
           e,
         );
+        if(i === retriesCount-1) {
+          throw new Error(e)
+        }
         await sleep(5000);
       }
     }
