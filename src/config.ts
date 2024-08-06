@@ -1,3 +1,5 @@
+import { ethers } from 'ethers';
+
 const parseStringArray = (value: string) => {
   return value.split(',')
     .filter((_) => _)
@@ -17,6 +19,7 @@ export default () => ({
     // Average interval between trade attempts [seconds]
     avgInterval: Number(process.env.TRADE_AVERAGE_INTERVAL || '3000'),
     maxRisk: Number(process.env.TRADE_MAX_RISK || '200000'),
+
     // Max notional value [USDT]
     maxTradeSize: Number(process.env.TRADE_MAX_SIZE || '100000'),
     maxMarginInUse: Number(process.env.TRADE_MAX_MARGIN_IN_USE || '0'),
@@ -25,5 +28,11 @@ export default () => ({
     zFactor: Number(process.env.TRADE_Z_FACTOR || '10'),
     px1: Number(process.env.TRADE_PX_1 || 0.6),
     px2: Number(process.env.TRADE_PX_2 || 0.75),
+
+    // Network params
+    maxTxnFeeETH: ethers.parseUnits(
+      String(process.env.MAX_TRANSACTION_FEE_ETH || 0.0001),
+      'ether'
+    ),
   },
 });

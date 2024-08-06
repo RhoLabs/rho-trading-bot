@@ -324,6 +324,7 @@ export class BaseStrategyService {
       this.configService.get('trading.maxMarginInUse'),
       underlyingDecimals,
     );
+    const maxTxnFee = this.configService.get('trading.maxTxnFeeETH');
 
     const portfolio = await this.web3Service.rhoSDK.getMarketPortfolio({
       marketId: market.descriptor.id,
@@ -443,18 +444,33 @@ export class BaseStrategyService {
       }
     }
 
+    if(signer) {
+      this.web3Service.rhoSDK.setPrivateKey(signer.privateKey)
+    }
+
     const txRequestParams: TransactionRequest = {}
 
-    if(this.configurationService.getNetworkType() === 'testnet') {
-      if(signer) {
-        this.web3Service.rhoSDK.setPrivateKey(signer.privateKey)
-      }
-      let gasLimit = await this.web3Service.rhoSDK.executeTradeEstimateGas(
+    let estimateGasLimit = 0n
+    try {
+      estimateGasLimit = await this.web3Service.rhoSDK.executeTradeEstimateGas(
         tradeParams,
       );
-      // Add 5% more gas on Testnet
-      gasLimit += (gasLimit * 5n) / 100n
-      txRequestParams.gasLimit = gasLimit
+
+      if(this.configurationService.getNetworkType() === 'testnet') {
+        // Add 5% more gas on Testnet to increase priority
+        estimateGasLimit += (estimateGasLimit * 5n) / 100n
+        txRequestParams.gasLimit = estimateGasLimit
+      }
+    } catch (e) {
+      this.logger.warn(`Failed to estimate gas:`, e.message)
+    }
+
+    if(
+      (estimateGasLimit > 0n && maxTxnFee > 0n) &&
+      estimateGasLimit > maxTxnFee
+    ) {
+      this.logger.error(`Estimated fee "${estimateGasLimit}" exceeds MAX_TRANSACTION_FEE_ETH "${maxTxnFee}", skip trade attempt`)
+      throw new Error('TransactionFeeLimitExceeded')
     }
 
     const txReceipt = await this.web3Service.executeTrade({
@@ -462,6 +478,7 @@ export class BaseStrategyService {
       txRequestParams,
       signer
     })
+
     if(txReceipt) {
       this.logger.log(`[${signerAddress}] Successful trade! tx hash: ${txReceipt.hash}`);
       this.metricsService.increaseTradesCounter()
