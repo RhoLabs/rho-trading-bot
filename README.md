@@ -81,7 +81,7 @@ PRIVATE_KEY=0x123,0x456,0x789
 
 ## Publishing to Docker Hub
 ```shell
-docker buildx build -t rholabs/trading-bot:1.7.0 --platform linux/amd64 .
+docker buildx build -t rholabs/trading-bot:1.7.1 --platform linux/amd64 .
 
-docker push rholabs/trading-bot:1.7.0
+docker push rholabs/trading-bot:1.7.1
 ```
