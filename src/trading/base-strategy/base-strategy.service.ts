@@ -326,10 +326,20 @@ export class BaseStrategyService {
     );
     const maxTxnFee = this.configService.get('trading.maxTxnFeeETH');
 
+    let botUnderlyingBalance = await this.web3Service.rhoSDK.getBalanceOf(
+      underlying,
+      signerAddress,
+    );
+
     const portfolio = await this.web3Service.rhoSDK.getMarketPortfolio({
       marketId: market.descriptor.id,
       userAddress: signerAddress,
     });
+    const marketState = await this.web3Service.getMarketState(
+      future,
+      portfolio,
+    );
+    const tradeDirection = this.getTradeDirection(market, future, marketState);
 
     const randomValue = generateRandom(
       maxTradeSize / 10,
@@ -342,13 +352,27 @@ export class BaseStrategyService {
     let tradeQuote: TradeQuote
 
     // Check trade quote. If exceeded rate impact limit, reduce notional value.
-    for(let i = 0; i < 10; i++) {
+    // If depositAmount exceed bot ERC20 balance, reduce the notional
+    for(let i = 0; i < 20; i++) {
       tradeQuote = await this.web3Service.rhoSDK.getTradeQuote({
         marketId: market.descriptor.id,
         futureId: future.id,
         notional,
         userAddress: signer.address,
       });
+
+      const selectedQuote =
+        tradeDirection === RiskDirection.RECEIVER
+          ? tradeQuote.receiverQuote
+          : tradeQuote.payerQuote;
+      const totalMargin = marginTotal(selectedQuote.newMargin);
+      const { newMarginThreshold } = selectedQuote;
+      let depositAmount = getMax(newMarginThreshold - totalMargin, 0n);
+      if(depositAmount > botUnderlyingBalance) {
+        notional -= (notional * 30n) / 100n
+        this.logger.log(`[${signer.address}] Trade quote failed: deposit amount (${depositAmount}) > bot underlying balance (${botUnderlyingBalance}). Reduce notional by 30%: ${notional}...`)
+        continue;
+      }
 
       if(
         !tradeQuote.exceededTradeRateImpactLimitForPayer
@@ -365,12 +389,6 @@ export class BaseStrategyService {
         this.logger.log(`[${signer.address}] Trade quote failed! Reduce notional by 30%: ${notional}...`)
       }
     }
-
-    const marketState = await this.web3Service.getMarketState(
-      future,
-      portfolio,
-    );
-    const tradeDirection = this.getTradeDirection(market, future, marketState);
 
     if (tradeDirection === null) {
       this.logger.warn(`Trade direction is null, skip trading`);
