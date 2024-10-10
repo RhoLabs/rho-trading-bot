@@ -147,6 +147,13 @@ export class BaseStrategyService {
         }] Trade attempt failed:`, e)
 
         if(e && e.message && typeof e.message === 'string') {
+          if(e.message.toLowerCase().includes('503 service unavailable')) {
+            this.logger.error(`RPC error: 503 service unavailable, exit`)
+            process.exit(1)
+          }
+        }
+
+        if(e && e.message && typeof e.message === 'string') {
           if(e.message.includes('insufficient funds for intrinsic transaction cost')) {
             this.logger.error(`Insufficient funds! Please refill bot address balance: "${signer.address}". Exit.`)
             process.exit(1)
