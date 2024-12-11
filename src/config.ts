@@ -30,9 +30,10 @@ export default () => ({
     px2: Number(process.env.TRADE_PX_2 || 0.75),
 
     // Network params
-    maxTxnFeeETH: ethers.parseUnits(
-      String(process.env.MAX_TRANSACTION_FEE_ETH || 0.0001),
-      'ether'
+    maxGasLimit: Number(process.env.MAX_GAS_LIMIT || 5_000_000),
+    maxGasPrice: ethers.parseUnits(
+      String(process.env.MAX_GAS_PRICE_GWEI || 10),
+      'gwei',
     ),
   },
 });
