@@ -3,16 +3,17 @@
 ### Rho Trading Bot
 
 ## Environment variables
-| Env variable name       | Is required | Default value | Description                                                                                                                                  |                                                                                                                                                                                                                                                                                                                                                                                                                                                
-|-------------------------|-------------|---------------|----------------------------------------------------------------------------------------------------------------------------------------------|
-| PRIVATE_KEY             | true        | -             | Private key for the bot account, needed to sign transactions. Use comma separated values to trade from multiple accounts: 0x123,0x456,0x789. |
-| NETWORK_TYPE            | false       | testnet       | mainnet / testnet                                                                                                                            |
-| FUTURES                 | true        | -             | Future aliases, separated by comma. Example: "BINANCE-ETHUSDT-SEP24,BINANCE-ETHUSDT-JUL24"                                                   |
-| TRADE_AVERAGE_INTERVAL  | false       | 3000          | [seconds] Average interval between trades                                                                                                    |
-| TRADE_MAX_SIZE          | false       | 100000        | [notional] Max notional amount                                                                                                               |
-| TRADE_MAX_RISK          | false       | 200000        | [notional] Used in trading rules to compare against dv01. Set in notional, converted to dv01.                                                |
-| RPC_URL                 | false       | -             | custom RPC URL                                                                                                                               |
-| MAX_TRANSACTION_FEE_ETH | false       | 0.0001        | Max trade transaction fee (ETH)                                                                                                              |
+| Env variable name      | Is required | Default value | Description                                                                                                                                  |                                                                                                                                                                                                                                                                                                                                                                                                                                                
+|------------------------|-------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| PRIVATE_KEY            | true        | -            | Private key for the bot account, needed to sign transactions. Use comma separated values to trade from multiple accounts: 0x123,0x456,0x789. |
+| NETWORK_TYPE           | false       | testnet      | mainnet / testnet                                                                                                                            |
+| FUTURES                | true        | -            | Future aliases, separated by comma. Example: "BINANCE-ETHUSDT-SEP24,BINANCE-ETHUSDT-JUL24"                                                   |
+| TRADE_AVERAGE_INTERVAL | false       | 3000         | [seconds] Average interval between trades                                                                                                    |
+| TRADE_MAX_SIZE         | false       | 100000       | [notional] Max notional amount                                                                                                               |
+| TRADE_MAX_RISK         | false       | 200000       | [notional] Used in trading rules to compare against dv01. Set in notional, converted to dv01.                                                |
+| RPC_URL                | false       | -            | custom RPC URL                                                                                                                               |
+| MAX_GAS_LIMIT          | false       | 5,000,000    | Max gas limit                                                                                                                                |
+| MAX_GAS_PRICE_GWEI     | false       | 10           | Max gas price (Gwei)                                                                                                                         |
 
 ## Run locally
 1) Prepare .env config. `.env.example` can be used as reference.
