@@ -132,14 +132,12 @@ export class BaseStrategyService {
         const signer = new ethers.Wallet(privateKey, provider);
 
         try {
-            // Introduce a random delay for each bot
-            const randomDelay = getRandomArbitrary(1000, 5000); // Random delay between 1-5 seconds
+            const randomDelay = getRandomArbitrary(30000, 120000); // Random delay between 30 - 120 seconds
             await new Promise(resolve => setTimeout(resolve, randomDelay));
 
             const result = await this.initiateTrade(market, future, signer);
             completedTrades.push(result);
 
-            // Reset failure counter for the bot
             this.failedAttemptsInRow = 0;
 
         } catch (e) {
