@@ -166,13 +166,13 @@ export class BaseStrategyService {
       Math.round(avgInterval / 2),
       Math.round(avgInterval * 1.5)
     );
-    const nextTradeTimestamp = Date.now() + nextTradingTimeout * 1000;
+    const nextTradeTimestamp = Date.now() + nextTradingTimeout * 1000
 
     const timeout = setTimeout(() => this.scheduleTrade(market, future), nextTradingTimeout * 1000);
 
-    const timeoutName = future.id;
+    const timeoutName = future.id
     if(this.getTimeoutByName(timeoutName)) {
-      this.schedulerRegistry.deleteTimeout(timeoutName);
+      this.schedulerRegistry.deleteTimeout(timeoutName)
     }
     this.schedulerRegistry.addTimeout(timeoutName, timeout);
 
@@ -183,7 +183,7 @@ export class BaseStrategyService {
     } seconds (${
       moment.utc(nextTradingTimeout * 1000).format('HH:mm:ss')
     })`);
-}
+ }
 
   getTradeDirection(
     market: MarketInfo,
