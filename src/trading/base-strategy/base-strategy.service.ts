@@ -126,6 +126,8 @@ export class BaseStrategyService {
     const privateKeys = this.configurationService.getPrivateKeys();
 
     let completedTrades = [];
+    let failedBots = 0; 
+
     for (let i = 0; i < privateKeys.length; i++) {
         const privateKey = privateKeys[i];
         const provider = new JsonRpcProvider(this.web3Service.rhoSDK.config.rpcUrl);
@@ -138,18 +140,20 @@ export class BaseStrategyService {
             const result = await this.initiateTrade(market, future, signer);
             completedTrades.push(result);
 
-            this.failedAttemptsInRow = 0;
+            this.failedAttemptsInRow = 0; 
 
         } catch (e) {
             this.logger.error(`[${signer.address}] Trade attempt failed:`, e);
 
             if (e.message.toLowerCase().includes('503 service unavailable')) {
                 this.logger.error(`RPC error: 503 service unavailable. Skipping this bot.`);
+                failedBots++;
                 continue;
             }
 
             if (e.message.includes('insufficient funds for intrinsic transaction cost')) {
                 this.logger.error(`Insufficient funds for bot address "${signer.address}". Skipping this bot.`);
+                failedBots++;
                 continue;
             }
 
@@ -157,33 +161,48 @@ export class BaseStrategyService {
 
             if (this.failedAttemptsInRow >= this.maxFailedAttemptsInRow) {
                 this.logger.warn(`Max failed attempts reached for this bot. Skipping.`);
+                failedBots++;
                 continue;
             }
         }
     }
 
+    if (failedBots === privateKeys.length) {
+        this.logger.error("All bots failed in this iteration. Stopping the trading service.");
+        this.stopService();
+        return; 
+    }
+
     const nextTradingTimeout = getRandomArbitrary(
-      Math.round(avgInterval / 2),
-      Math.round(avgInterval * 1.5)
+        Math.round(avgInterval / 2),
+        Math.round(avgInterval * 1.5)
     );
-    const nextTradeTimestamp = Date.now() + nextTradingTimeout * 1000
+    const nextTradeTimestamp = Date.now() + nextTradingTimeout * 1000;
 
     const timeout = setTimeout(() => this.scheduleTrade(market, future), nextTradingTimeout * 1000);
 
-    const timeoutName = future.id
-    if(this.getTimeoutByName(timeoutName)) {
-      this.schedulerRegistry.deleteTimeout(timeoutName)
+    const timeoutName = future.id;
+    if (this.getTimeoutByName(timeoutName)) {
+        this.schedulerRegistry.deleteTimeout(timeoutName);
     }
     this.schedulerRegistry.addTimeout(timeoutName, timeout);
 
     this.logger.log(`Completed trades: ${completedTrades.length} / ${privateKeys.length}. Next trade attempt at ${
-      moment(nextTradeTimestamp).format('HH:mm:ss')
+        moment(nextTradeTimestamp).format('HH:mm:ss')
     }, in ${
-      nextTradingTimeout
+        nextTradingTimeout
     } seconds (${
-      moment.utc(nextTradingTimeout * 1000).format('HH:mm:ss')
+        moment.utc(nextTradingTimeout * 1000).format('HH:mm:ss')
     })`);
- }
+}
+
+private stopService() {
+    this.logger.warn("Stopping trading service. Cleaning up resources...");
+    this.schedulerRegistry.getTimeouts().forEach(timeoutName => {
+        this.schedulerRegistry.deleteTimeout(timeoutName);
+    });
+    process.exit(1); 
+}
 
   getTradeDirection(
     market: MarketInfo,
