@@ -140,7 +140,7 @@ export class BaseStrategyService {
             const result = await this.initiateTrade(market, future, signer);
             completedTrades.push(result);
 
-            this.failedAttemptsInRow = 0; 
+            this.failedAttemptsInRow = 0;
 
         } catch (e) {
             this.logger.error(`[${signer.address}] Trade attempt failed:`, e);
@@ -174,25 +174,25 @@ export class BaseStrategyService {
     }
 
     const nextTradingTimeout = getRandomArbitrary(
-        Math.round(avgInterval / 2),
-        Math.round(avgInterval * 1.5)
+      Math.round(avgInterval / 2),
+      Math.round(avgInterval * 1.5)
     );
-    const nextTradeTimestamp = Date.now() + nextTradingTimeout * 1000;
+    const nextTradeTimestamp = Date.now() + nextTradingTimeout * 1000
 
     const timeout = setTimeout(() => this.scheduleTrade(market, future), nextTradingTimeout * 1000);
 
-    const timeoutName = future.id;
-    if (this.getTimeoutByName(timeoutName)) {
-        this.schedulerRegistry.deleteTimeout(timeoutName);
+    const timeoutName = future.id
+    if(this.getTimeoutByName(timeoutName)) {
+      this.schedulerRegistry.deleteTimeout(timeoutName);
     }
     this.schedulerRegistry.addTimeout(timeoutName, timeout);
 
     this.logger.log(`Completed trades: ${completedTrades.length} / ${privateKeys.length}. Next trade attempt at ${
-        moment(nextTradeTimestamp).format('HH:mm:ss')
+      moment(nextTradeTimestamp).format('HH:mm:ss')
     }, in ${
-        nextTradingTimeout
+      nextTradingTimeout
     } seconds (${
-        moment.utc(nextTradingTimeout * 1000).format('HH:mm:ss')
+      moment.utc(nextTradingTimeout * 1000).format('HH:mm:ss')
     })`);
 }
 
