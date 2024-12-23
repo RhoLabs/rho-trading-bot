@@ -126,6 +126,8 @@ export class BaseStrategyService {
     const privateKeys = this.configurationService.getPrivateKeys();
 
     let completedTrades = [];
+    let failedBots = 0; 
+
     for (let i = 0; i < privateKeys.length; i++) {
         const privateKey = privateKeys[i];
         const provider = new JsonRpcProvider(this.web3Service.rhoSDK.config.rpcUrl);
@@ -145,11 +147,13 @@ export class BaseStrategyService {
 
             if (e.message.toLowerCase().includes('503 service unavailable')) {
                 this.logger.error(`RPC error: 503 service unavailable. Skipping this bot.`);
+                failedBots++;
                 continue;
             }
 
             if (e.message.includes('insufficient funds for intrinsic transaction cost')) {
                 this.logger.error(`Insufficient funds for bot address "${signer.address}". Skipping this bot.`);
+                failedBots++;
                 continue;
             }
 
@@ -157,9 +161,16 @@ export class BaseStrategyService {
 
             if (this.failedAttemptsInRow >= this.maxFailedAttemptsInRow) {
                 this.logger.warn(`Max failed attempts reached for this bot. Skipping.`);
+                failedBots++;
                 continue;
             }
         }
+    }
+
+    if (failedBots === privateKeys.length) {
+        this.logger.error("All bots failed in this iteration. Stopping the trading service.");
+        this.stopService();
+        return; 
     }
 
     const nextTradingTimeout = getRandomArbitrary(
@@ -172,7 +183,7 @@ export class BaseStrategyService {
 
     const timeoutName = future.id
     if(this.getTimeoutByName(timeoutName)) {
-      this.schedulerRegistry.deleteTimeout(timeoutName)
+      this.schedulerRegistry.deleteTimeout(timeoutName);
     }
     this.schedulerRegistry.addTimeout(timeoutName, timeout);
 
@@ -183,7 +194,15 @@ export class BaseStrategyService {
     } seconds (${
       moment.utc(nextTradingTimeout * 1000).format('HH:mm:ss')
     })`);
- }
+}
+
+private stopService() {
+    this.logger.warn("Stopping trading service. Cleaning up resources...");
+    this.schedulerRegistry.getTimeouts().forEach(timeoutName => {
+        this.schedulerRegistry.deleteTimeout(timeoutName);
+    });
+    process.exit(1); 
+}
 
   getTradeDirection(
     market: MarketInfo,
