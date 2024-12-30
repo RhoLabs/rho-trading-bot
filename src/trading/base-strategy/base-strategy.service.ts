@@ -44,7 +44,7 @@ export class BaseStrategyService {
   }
 
   async start() {
-    const configFutureAliases = this.configurationService.getFutures();
+    const aliasesFromConfig = this.configurationService.getFutures();
     const configMarketIds = this.configurationService.getMarketIds();
     const configFutureIds = this.configurationService.getFutureIds();
     const privateKeys = this.configurationService.getPrivateKeys();
@@ -59,22 +59,23 @@ export class BaseStrategyService {
     })
 
     // Validate config params
-    configFutureAliases.forEach(alias => {
-      if(!allFutureAliases.includes(alias.toLowerCase())) {
-        this.logger.error(`Future with alias "${alias}" doesn't exists, exit`)
-        process.exit(1)
+    const configuredAliases = aliasesFromConfig.filter(alias => {
+      const isRecognized = (allFutureAliases.includes(alias.toLowerCase()))
+      if(!isRecognized) {
+        this.logger.error(`Future with alias "${alias}" doesn't exists, skipping it...`)
       }
+      return isRecognized
     })
 
-    if(configFutureAliases.length > 0) {
+    if(configuredAliases.length > 0) {
       tradingFutures = marketFutures.filter(future => {
         const market = markets.find(item => item.descriptor.id === future.marketId)
         const futureAlias = getFutureAlias(market, future).toLowerCase()
-        return configFutureAliases.includes(futureAlias)
+        return configuredAliases.includes(futureAlias)
       })
 
       if(configMarketIds.length > 0) {
-        this.logger.log(`Config param [FUTURES]: ${configFutureAliases}`)
+        this.logger.log(`Config param [FUTURES]: ${configuredAliases}`)
       }
 
       if(configMarketIds.length > 0) {
@@ -96,7 +97,7 @@ export class BaseStrategyService {
     }
 
     if(tradingFutures.length === 0) {
-      this.logger.error('Failed to start new trading tasks: no futures found in config. Use [FUTURES] to set list of active futures.')
+      this.logger.error('Failed to start new trading tasks: no active futures found in config. Use [FUTURES] to set list of active futures.')
       process.exit(1)
     }
 
@@ -105,7 +106,7 @@ export class BaseStrategyService {
         privateKeys.length
       }, futures: ${
         tradingFutures.length
-      } (aliases: "${configFutureAliases}").`)
+      } (aliases: "${configuredAliases}").`)
     }
 
     for (const future of tradingFutures) {
